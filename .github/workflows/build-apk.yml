@@ -1,0 +1,73 @@
+name: Build & Release APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Flutter APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.2'
+          channel: stable
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Build release APK
+        working-directory: mobile
+        run: flutter build apk --release
+
+      - name: Rename APK
+        run: |
+          mkdir -p releases
+          cp mobile/build/app/outputs/flutter-apk/app-release.apk releases/mediconnect-v1.0.0.apk
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mediconnect-apk
+          path: releases/mediconnect-v1.0.0.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: MediConnectSmart v1.0.0
+          body: |
+            ## 🏥 MediConnectSmart v1.0.0
+
+            AI-powered Healthcare Management Platform
+
+            ### ⬇️ Download
+            Download the APK below and install on any Android device.
+
+            ### Features
+            - Doctor & Patient Registration
+            - Appointment Booking
+            - Digital Prescriptions
+            - Medicine Reminders
+            - In-App Chat
+            - Lab Results Upload
+            - AI Pre-Appointment Summary
+            - Urdu/English Support
+          files: releases/mediconnect-v1.0.0.apk
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
