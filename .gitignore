@@ -1,0 +1,65 @@
+# ─── Node.js / Backend ────────────────────────────────────────
+node_modules/
+dist/
+build/
+coverage/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+.env.local
+.env.*.local
+*.tsbuildinfo
+
+# ─── Flutter / Mobile ─────────────────────────────────────────
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/build/
+mobile/.idea/
+mobile/*.iml
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/key.properties
+mobile/ios/.symlinks/
+mobile/ios/Pods/
+mobile/ios/Flutter/Flutter.framework
+mobile/ios/Flutter/Flutter.podspec
+mobile/linux/.dart_tool/
+mobile/macos/.dart_tool/
+mobile/windows/.dart_tool/
+
+# ─── React Native ─────────────────────────────────────────────
+mobile-rn/node_modules/
+mobile-rn/.expo/
+mobile-rn/android/
+mobile-rn/ios/
+mobile-rn/*.jks
+mobile-rn/*.keystore
+
+# ─── Python backend ───────────────────────────────────────────
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+backend/.env
+
+# ─── OS & Editor ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ─── Secrets ──────────────────────────────────────────────────
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+google-services.json
+GoogleService-Info.plist
+
+# ─── Releases (APKs tracked separately via Git LFS or Releases) ──
+# releases/*.apk   # uncomment to exclude APKs from git

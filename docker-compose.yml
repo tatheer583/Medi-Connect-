@@ -1,0 +1,60 @@
+version: '3.8'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MediConnectSmart — Local Development Stack
+#
+# Services included here:
+#   • api    — Node.js/Express backend (port 5000)
+#   • redis  — Redis 7 cache (port 6379)
+#
+# Appwrite BaaS:
+#   For simplicity, use Appwrite Cloud (https://cloud.appwrite.io) instead of
+#   running Appwrite locally. Create a free project at cloud.appwrite.io and
+#   set APPWRITE_PROJECT_ID / APPWRITE_API_KEY in backend-node/.env.
+#
+#   If you need a fully local Appwrite instance, refer to the official
+#   self-hosting guide: https://appwrite.io/docs/advanced/self-hosting
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  # ── Node.js API backend ────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./backend-node
+      dockerfile: Dockerfile
+    container_name: mediconnect_api
+    restart: unless-stopped
+    ports:
+      - '5000:5000'
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      REDIS_URL: redis://redis:6379
+    env_file:
+      - ./backend-node/.env
+    depends_on:
+      - redis
+    volumes:
+      - ./backend-node/src:/app/src   # hot-reload in dev
+    networks:
+      - mediconnect
+
+  # ── Redis cache ────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: mediconnect_redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - mediconnect
+
+networks:
+  mediconnect:
+    driver: bridge
+
+volumes:
+  redis_data:
