@@ -8,7 +8,7 @@ MediConnectSmart bridges the gap between doctors, clinics, and patients through 
 
 ## 📱 Download APK
 
-> ⬇️ **[Download Latest APK](../../releases/latest)** — Install directly on any Android device
+> ⬇️ **[Download Latest APK](https://github.com/tatheer583/Medi-Commit-/releases/latest)** — Install directly on any Android device
 
 ---
 
