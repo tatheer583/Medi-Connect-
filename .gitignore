@@ -61,5 +61,5 @@ Thumbs.db
 google-services.json
 GoogleService-Info.plist
 
-# ─── Releases (APKs tracked separately via Git LFS or Releases) ──
-# releases/*.apk   # uncomment to exclude APKs from git
+# ─── Releases (APKs uploaded via GitHub Releases, not git) ───
+releases/*.apk
