@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:mediconnect_mobile/src/services/auth_service.dart';
+import 'package:mediconnect_mobile/src/config/appwrite_client.dart';
+import 'package:mediconnect_mobile/src/features/chat/chat_list_screen.dart';
 import 'package:mediconnect_mobile/src/features/profile/profile_screen.dart';
 import 'package:mediconnect_mobile/src/routing/app_router.dart';
-import 'package:mediconnect_mobile/src/features/chat/chat_list_screen.dart';
+import 'package:mediconnect_mobile/src/services/auth_service.dart';
+import 'package:mediconnect_mobile/src/shared/widgets/app_toast.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -26,13 +28,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         title: Text(isDoctor ? 'Doctor Dashboard' : 'Patient Dashboard'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.swap_horiz),
-            tooltip: 'Toggle Role (Dev Only)',
-            onPressed: () => ref.read(authServiceProvider.notifier).toggleRole(),
-          ),
-          IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(authServiceProvider.notifier).logout(),
+            tooltip: 'Logout',
+            onPressed: () async {
+              await ref.read(authServiceProvider.notifier).logout();
+              if (context.mounted) context.go('/');
+            },
           ),
         ],
       ),
@@ -127,6 +128,8 @@ class _PatientDashboardBody extends StatelessWidget {
             time: '09:00 PM',
             taken: false,
           ),
+          const SizedBox(height: 24),
+          _PingButton(),
         ],
       ),
     );
@@ -311,6 +314,58 @@ class _DoctorDashboardBody extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PingButton extends StatefulWidget {
+  @override
+  State<_PingButton> createState() => _PingButtonState();
+}
+
+class _PingButtonState extends State<_PingButton> {
+  bool _isPinging = false;
+
+  Future<void> _sendPing() async {
+    setState(() => _isPinging = true);
+    try {
+      await client.ping();
+      if (mounted) {
+        AppToast.show(context, 'Ping successful! Appwrite is connected.', type: ToastType.success);
+      }
+    } catch (e) {
+      if (mounted) {
+        AppToast.show(context, 'Ping failed: ${e.toString()}', type: ToastType.error);
+      }
+    } finally {
+      if (mounted) setState(() => _isPinging = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: _isPinging ? null : _sendPing,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF1A73E8),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        icon: _isPinging
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              )
+            : const Icon(Icons.wifi_tethering_rounded),
+        label: Text(
+          _isPinging ? 'Pinging...' : 'Send a ping',
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
     );

@@ -1,35 +1,83 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mediconnect_mobile/src/services/appwrite_service.dart';
 
 part 'auth_service.g.dart';
 
-enum UserRole { doctor, patient }
+// Single source of truth for UserRole — used across the whole app
+enum UserRole { patient, doctor, clinic }
 
 class UserState {
   final String? userId;
+  final String? email;
   final UserRole role;
   final bool isAuthenticated;
 
-  UserState({this.userId, required this.role, this.isAuthenticated = false});
+  const UserState({
+    this.userId,
+    this.email,
+    required this.role,
+    this.isAuthenticated = false,
+  });
+
+  UserState copyWith({
+    String? userId,
+    String? email,
+    UserRole? role,
+    bool? isAuthenticated,
+  }) {
+    return UserState(
+      userId: userId ?? this.userId,
+      email: email ?? this.email,
+      role: role ?? this.role,
+      isAuthenticated: isAuthenticated ?? this.isAuthenticated,
+    );
+  }
 }
 
 @riverpod
 class AuthService extends _$AuthService {
   @override
   UserState build() {
-    // Initial mock state: Patient
-    return UserState(role: UserRole.patient, isAuthenticated: false);
+    return const UserState(role: UserRole.patient, isAuthenticated: false);
   }
 
-  void login(UserRole role) {
-    state = UserState(userId: 'mock-uid', role: role, isAuthenticated: true);
+  /// Called after successful Appwrite login
+  void login(String email, UserRole role) {
+    state = UserState(
+      userId: 'appwrite-user',
+      email: email,
+      role: role,
+      isAuthenticated: true,
+    );
   }
 
-  void logout() {
-    state = UserState(role: UserRole.patient, isAuthenticated: false);
+  /// Called on logout — clears Appwrite session + local prefs
+  Future<void> logout() async {
+    final appwrite = AppwriteService();
+    appwrite.initialize();
+    await appwrite.logout();
+    state = const UserState(role: UserRole.patient, isAuthenticated: false);
   }
 
-  void toggleRole() {
-    final newRole = state.role == UserRole.patient ? UserRole.doctor : UserRole.patient;
-    state = UserState(userId: state.userId, role: newRole, isAuthenticated: state.isAuthenticated);
+  /// Restore session from SharedPreferences on app start
+  Future<void> restoreSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final sessionId = prefs.getString('appwrite_session');
+    final roleString = prefs.getString('user_role');
+    final email = prefs.getString('user_email');
+
+    if (sessionId != null && roleString != null) {
+      final role = UserRole.values.firstWhere(
+        (e) => e.name == roleString,
+        orElse: () => UserRole.patient,
+      );
+      state = UserState(
+        userId: prefs.getString('appwrite_user_id'),
+        email: email,
+        role: role,
+        isAuthenticated: true,
+      );
+    }
   }
 }
