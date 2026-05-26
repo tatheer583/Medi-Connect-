@@ -39,35 +39,59 @@ jobs:
           mkdir -p releases
           cp mobile/build/app/outputs/flutter-apk/app-release.apk releases/mediconnect-v1.0.0.apk
 
+      - name: Delete old tag if exists
+        run: |
+          git tag -d v1.0.0 2>/dev/null || true
+          git push origin :refs/tags/v1.0.0 2>/dev/null || true
+        continue-on-error: true
+
       - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:
           name: mediconnect-apk
           path: releases/mediconnect-v1.0.0.apk
 
-      - name: Create GitHub Release
+      - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.0
-          name: MediConnectSmart v1.0.0
+          name: MediConnect v1.0.0
           body: |
-            ## 🏥 MediConnectSmart v1.0.0
+            ## 🏥 MediConnect v1.0.0
 
-            AI-powered Healthcare Management Platform
+            Complete Healthcare Management Platform
 
-            ### ⬇️ Download
-            Download the APK below and install on any Android device.
+            ### ⬇️ Download APK
+            Download the APK file below and install on your Android device (8.0+).
 
-            ### Features
-            - Doctor & Patient Registration
-            - Appointment Booking
-            - Digital Prescriptions
-            - Medicine Reminders
-            - In-App Chat
-            - Lab Results Upload
-            - AI Pre-Appointment Summary
-            - Urdu/English Support
+            ### ✨ Features
+            - Appointment Booking System
+            - Digital Prescriptions with PDF
+            - Medicine Reminders with Notifications
+            - Real-time In-App Chat
+            - Lab Results Management
+            - AI-Powered Patient Summaries (OpenAI)
+            - Modern Professional UI
+            - Appwrite Cloud Integration
+
+            ### 📱 Installation
+            1. Download the APK file
+            2. Enable "Unknown Sources" in Android settings
+            3. Install the APK
+            4. Create account and start using
+
+            ### 📋 Requirements
+            - Android 8.0 or higher
+            - 51 MB free storage
+            - Internet connection
+
+            ### 📖 Documentation
+            - [README](https://github.com/tatheer583/Medi-Commit-/blob/main/README.md)
+            - [Installation Guide](https://github.com/tatheer583/Medi-Commit-/blob/main/APK_DOWNLOAD_GUIDE.md)
+            - [Release Notes](https://github.com/tatheer583/Medi-Commit-/blob/main/RELEASE_NOTES.md)
           files: releases/mediconnect-v1.0.0.apk
           make_latest: true
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
