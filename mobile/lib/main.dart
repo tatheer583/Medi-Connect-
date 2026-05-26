@@ -8,10 +8,18 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Appwrite SDK
-  AppwriteService().initialize();
+  try {
+    AppwriteService().initialize();
+  } catch (e) {
+    debugPrint('Appwrite initialization error: $e');
+  }
 
   // Initialize local notifications
-  await NotificationService().initialize();
+  try {
+    await NotificationService().initialize();
+  } catch (e) {
+    debugPrint('Notification service initialization error: $e');
+  }
 
   runApp(
     const ProviderScope(

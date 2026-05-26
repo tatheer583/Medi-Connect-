@@ -11,10 +11,18 @@ class MediConnectApp extends ConsumerWidget {
     final goRouter = ref.watch(goRouterProvider);
 
     return MaterialApp.router(
-      title: 'MediConnect',
+      title: 'MediConnect Smart',
       theme: AppTheme.lightTheme,
       routerConfig: goRouter,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaleFactor: 1.0,
+          ),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }
