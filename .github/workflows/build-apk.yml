@@ -23,7 +23,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.2'
+          flutter-version: '3.19.6'
           channel: stable
 
       - name: Install dependencies
@@ -86,9 +86,9 @@ jobs:
             - Internet connection
 
             ### 📖 Documentation
-            - [README](https://github.com/tatheer583/Medi-Commit-/blob/main/README.md)
-            - [Installation Guide](https://github.com/tatheer583/Medi-Commit-/blob/main/APK_DOWNLOAD_GUIDE.md)
-            - [Release Notes](https://github.com/tatheer583/Medi-Commit-/blob/main/RELEASE_NOTES.md)
+            - [README](https://github.com/tatheer583/Medi-Connect-/blob/main/README.md)
+            - [Installation Guide](https://github.com/tatheer583/Medi-Connect-/blob/main/APK_DOWNLOAD_GUIDE.md)
+            - [Release Notes](https://github.com/tatheer583/Medi-Connect-/blob/main/RELEASE_NOTES.md)
           files: releases/mediconnect-v1.0.0.apk
           make_latest: true
           draft: false
