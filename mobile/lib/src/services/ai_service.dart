@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AiService {
   static final AiService _instance = AiService._internal();
@@ -7,7 +8,7 @@ class AiService {
   AiService._internal();
 
   // API key should be provided at runtime from environment or secure storage
-  static String _apiKey = '';
+  static String _apiKey = dotenv.env['OPENAI_API_KEY'] ?? '';
   static const String _endpoint = 'https://api.openai.com/v1/chat/completions';
   static const String _model = 'gpt-4o-mini';
 

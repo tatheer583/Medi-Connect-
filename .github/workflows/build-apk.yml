@@ -30,6 +30,14 @@ jobs:
         working-directory: mobile
         run: flutter pub get
 
+      - name: Create .env file
+        working-directory: mobile
+        run: |
+          echo "APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1" > .env
+          echo "APPWRITE_PROJECT_ID=${{ secrets.APPWRITE_PROJECT_ID }}" >> .env
+          echo "APPWRITE_DATABASE_ID=mediconnect" >> .env
+          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+
       - name: Build release APK
         working-directory: mobile
         run: flutter build apk --release

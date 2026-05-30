@@ -6,8 +6,8 @@ param(
     [string]$DatabaseId
 )
 
-$ApiKey = "standard_c932a7b1037f592e1d6b6aa89d731f6d3069497957d984163cf13c94bf5fcf9a832d132f8356095268e4de74ee382f147331aabbcb7f1e9aa4e0c1adcd0d8269b7291c700e4f55a88071d69a3a0831996ad4873c3c3c1159d7144ec738d2b68976e709f9e5ee663e26ce1f7908f658a8d12858a2c1ee1d35e049a485e143c4d0"
-$ProjectId = "6a14834f003c65073c46"
+$ApiKey = "YOUR_APPWRITE_API_KEY"
+$ProjectId = "YOUR_APPWRITE_PROJECT_ID"
 $Endpoint = "https://fra.cloud.appwrite.io/v1"
 $H = @{ "Content-Type"="application/json"; "X-Appwrite-Project"=$ProjectId; "X-Appwrite-Key"=$ApiKey }
 

@@ -1,6 +1,7 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AppwriteService {
   static final AppwriteService _instance = AppwriteService._internal();
@@ -13,8 +14,8 @@ class AppwriteService {
   late Account _account;
   late Databases _databases;
 
-  final String _endpoint = 'https://fra.cloud.appwrite.io/v1';
-  final String _projectId = '6a14834f003c65073c46';
+  final String _endpoint = dotenv.env['APPWRITE_ENDPOINT'] ?? 'https://cloud.appwrite.io/v1';
+  final String _projectId = dotenv.env['APPWRITE_PROJECT_ID'] ?? '';
 
   bool _isInitialized = false;
 

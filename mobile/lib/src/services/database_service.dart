@@ -2,6 +2,7 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:mediconnect_mobile/src/config/appwrite_client.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Appwrite database IDs — create these collections in your Appwrite console
 class AppwriteDB {
@@ -320,7 +321,9 @@ class DatabaseService {
   }
 
   String getFileViewUrl(String bucketId, String fileId) {
-    return 'https://fra.cloud.appwrite.io/v1/storage/buckets/$bucketId/files/$fileId/view?project=6a14834f003c65073c46';
+    final endpoint = dotenv.env['APPWRITE_ENDPOINT'] ?? 'https://cloud.appwrite.io/v1';
+    final projectId = dotenv.env['APPWRITE_PROJECT_ID'] ?? '';
+    return '$endpoint/storage/buckets/$bucketId/files/$fileId/view?project=$projectId';
   }
 
   // ─── Realtime ─────────────────────────────────────────────────────────────

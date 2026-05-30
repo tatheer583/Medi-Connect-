@@ -1,7 +1,0 @@
-fastapi
-uvicorn
-supabase
-google-generativeai
-python-dotenv
-pydantic
-apscheduler

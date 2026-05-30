@@ -6,7 +6,7 @@ param(
     [string]$ApiKey
 )
 
-$ProjectId = "6a14834f003c65073c46"
+$ProjectId = "YOUR_APPWRITE_PROJECT_ID"
 $Endpoint = "https://fra.cloud.appwrite.io/v1"
 $DatabaseId = "mediconnect_db"
 
