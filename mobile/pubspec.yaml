@@ -16,7 +16,7 @@ dependencies:
   riverpod_annotation: ^4.0.2
   go_router: ^17.2.3
   appwrite: ^24.2.0
-  shared_preferences: ^2.5.5
+  shared_preferences: ^2.5.3
 
   # UI & Fonts
   google_fonts: ^6.2.1
