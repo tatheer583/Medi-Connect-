@@ -6,7 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Appwrite database IDs — create these collections in your Appwrite console
 class AppwriteDB {
-  static const String databaseId = 'mediconnect_db';
+  static String get databaseId => dotenv.env['APPWRITE_DATABASE_ID'] ?? 'mediconnect_db';
 
   // Collection IDs
   static const String appointments = 'appointments';
@@ -19,8 +19,8 @@ class AppwriteDB {
   static const String userProfiles = 'user_profiles';
 
   // Storage bucket IDs
-  static const String labResultsBucket = 'lab_results_files';
-  static const String prescriptionsBucket = 'lab_results_files'; // shared bucket (free plan)
+  static String get labResultsBucket => dotenv.env['APPWRITE_LAB_RESULTS_BUCKET'] ?? 'lab_results_files';
+  static String get prescriptionsBucket => dotenv.env['APPWRITE_PRESCRIPTIONS_BUCKET'] ?? 'lab_results_files'; // shared bucket (free plan)
 }
 
 class DatabaseService {

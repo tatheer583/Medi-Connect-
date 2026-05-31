@@ -1,105 +1,66 @@
-name: Build & Release APK
+name: Build and Release Android APK
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
-    name: Build Flutter APK
+    name: Build & Release APK
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          fetch-depth: 0 # Required for delete-older-releases to work properly if needed
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
           java-version: '17'
 
-      - name: Set up Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.6'
-          channel: stable
+          flutter-version: '3.19.0' # 3.11+
+          channel: 'stable'
+          cache: true
 
-      - name: Install dependencies
-        working-directory: mobile
+      - name: Install Dependencies
+        working-directory: ./mobile
         run: flutter pub get
 
-      - name: Create .env file
-        working-directory: mobile
-        run: |
-          echo "APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1" > .env
-          echo "APPWRITE_PROJECT_ID=${{ secrets.APPWRITE_PROJECT_ID }}" >> .env
-          echo "APPWRITE_DATABASE_ID=mediconnect" >> .env
-          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
-
-      - name: Build release APK
-        working-directory: mobile
+      - name: Build APK
+        working-directory: ./mobile
         run: flutter build apk --release
 
-      - name: Rename APK
+      - name: Generate Dynamic Version Tag
+        id: generate_tag
         run: |
-          mkdir -p releases
-          cp mobile/build/app/outputs/flutter-apk/app-release.apk releases/mediconnect-v1.0.0.apk
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "tag=v1.0.0-${SHORT_SHA}" >> $GITHUB_OUTPUT
 
-      - name: Delete old tag if exists
-        run: |
-          git tag -d v1.0.0 2>/dev/null || true
-          git push origin :refs/tags/v1.0.0 2>/dev/null || true
-        continue-on-error: true
-
-      - name: Upload APK as artifact
-        uses: actions/upload-artifact@v4
+      - name: Delete Old Pre-releases
+        uses: dev-drprasad/delete-older-releases@v0.3.3
         with:
-          name: mediconnect-apk
-          path: releases/mediconnect-v1.0.0.apk
+          keep_latest: 3
+          delete_tags: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create or Update GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Create GitHub Release and Upload APK
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: v1.0.0
-          name: MediConnect v1.0.0
-          body: |
-            ## 🏥 MediConnect v1.0.0
-
-            Complete Healthcare Management Platform
-
-            ### ⬇️ Download APK
-            Download the APK file below and install on your Android device (8.0+).
-
-            ### ✨ Features
-            - Appointment Booking System
-            - Digital Prescriptions with PDF
-            - Medicine Reminders with Notifications
-            - Real-time In-App Chat
-            - Lab Results Management
-            - AI-Powered Patient Summaries (OpenAI)
-            - Modern Professional UI
-            - Appwrite Cloud Integration
-
-            ### 📱 Installation
-            1. Download the APK file
-            2. Enable "Unknown Sources" in Android settings
-            3. Install the APK
-            4. Create account and start using
-
-            ### 📋 Requirements
-            - Android 8.0 or higher
-            - 51 MB free storage
-            - Internet connection
-
-            ### 📖 Documentation
-            - [README](https://github.com/tatheer583/Medi-Connect-/blob/main/README.md)
-            - [Installation Guide](https://github.com/tatheer583/Medi-Connect-/blob/main/APK_DOWNLOAD_GUIDE.md)
-            - [Release Notes](https://github.com/tatheer583/Medi-Connect-/blob/main/RELEASE_NOTES.md)
-          files: releases/mediconnect-v1.0.0.apk
-          make_latest: true
-          draft: false
+          tag_name: ${{ steps.generate_tag.outputs.tag }}
+          name: Release ${{ steps.generate_tag.outputs.tag }}
           prerelease: false
+          files: mobile/build/app/outputs/flutter-apk/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
