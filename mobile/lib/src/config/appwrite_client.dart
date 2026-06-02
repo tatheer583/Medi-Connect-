@@ -1,7 +1,6 @@
 import 'package:appwrite/appwrite.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-/// Global Appwrite client
+/// Global Appwrite client — hardcoded for production
 final Client client = Client()
-    .setProject(dotenv.env['APPWRITE_PROJECT_ID'] ?? '')
-    .setEndpoint(dotenv.env['APPWRITE_ENDPOINT'] ?? 'https://cloud.appwrite.io/v1');
+    .setProject('6a14834f003c65073c46')
+    .setEndpoint('https://fra.cloud.appwrite.io/v1');
