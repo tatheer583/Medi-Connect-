@@ -320,9 +320,7 @@ class DatabaseService {
   }
 
   String getFileViewUrl(String bucketId, String fileId) {
-    final endpoint = dotenv.env['APPWRITE_ENDPOINT'] ?? 'https://cloud.appwrite.io/v1';
-    final projectId = dotenv.env['APPWRITE_PROJECT_ID'] ?? '';
-    return '$endpoint/storage/buckets/$bucketId/files/$fileId/view?project=$projectId';
+    return 'https://fra.cloud.appwrite.io/v1/storage/buckets/$bucketId/files/$fileId/view?project=6a14834f003c65073c46';
   }
 
   // ─── Realtime ─────────────────────────────────────────────────────────────

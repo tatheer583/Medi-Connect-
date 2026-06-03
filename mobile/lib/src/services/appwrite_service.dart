@@ -1,21 +1,19 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AppwriteService {
   static final AppwriteService _instance = AppwriteService._internal();
-
   factory AppwriteService() => _instance;
-
   AppwriteService._internal();
 
   late Client _client;
   late Account _account;
   late Databases _databases;
 
-  final String _endpoint = dotenv.env['APPWRITE_ENDPOINT'] ?? 'https://cloud.appwrite.io/v1';
-  final String _projectId = dotenv.env['APPWRITE_PROJECT_ID'] ?? '';
+  // Hardcoded for production — these are public client-side values
+  static const String _endpoint = 'https://fra.cloud.appwrite.io/v1';
+  static const String _projectId = '6a14834f003c65073c46';
 
   bool _isInitialized = false;
 
@@ -93,7 +91,6 @@ class AppwriteService {
     String role,
   ) async {
     try {
-      // Create the account
       final user = await _account.create(
         userId: ID.unique(),
         email: email,
@@ -101,18 +98,29 @@ class AppwriteService {
         name: name,
       );
 
-      // Create a session immediately
       final session = await _account.createEmailPasswordSession(
         email: email,
         password: password,
       );
 
       await saveSession(session.$id, user.$id);
+    } catch (e) {
+      throw _mapException(e);
+    }
+  }
 
-      // Send email verification
-      await _account.createEmailVerification(
-        url: 'https://mediconnect.app/verify',
-      );
+  Future<void> logout() async {
+    try {
+      await _account.deleteSession(sessionId: 'current');
+    } catch (_) {
+      // Ignore errors during logout
+    }
+    await clearSession();
+  }
+
+  Future<models.User> getCurrentUser() async {
+    try {
+      return await _account.get();
     } catch (e) {
       throw _mapException(e);
     }
@@ -135,40 +143,6 @@ class AppwriteService {
         email: email,
         url: 'https://mediconnect.app/reset-password',
       );
-    } catch (e) {
-      throw _mapException(e);
-    }
-  }
-
-  Future<void> updateRecovery(
-    String userId,
-    String secret,
-    String password,
-  ) async {
-    try {
-      await _account.updateRecovery(
-        userId: userId,
-        secret: secret,
-        password: password,
-      );
-    } catch (e) {
-      throw _mapException(e);
-    }
-  }
-
-  Future<void> logout() async {
-    try {
-      await _account.deleteSession(sessionId: 'current');
-      await clearSession();
-    } catch (_) {
-      // Ignore errors during logout — clear local state regardless
-      await clearSession();
-    }
-  }
-
-  Future<models.User> getCurrentUser() async {
-    try {
-      return await _account.get();
     } catch (e) {
       throw _mapException(e);
     }
