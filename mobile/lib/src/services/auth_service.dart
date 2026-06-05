@@ -10,12 +10,14 @@ enum UserRole { patient, doctor, clinic }
 class UserState {
   final String? userId;
   final String? email;
+  final String? name;
   final UserRole role;
   final bool isAuthenticated;
 
   const UserState({
     this.userId,
     this.email,
+    this.name,
     required this.role,
     this.isAuthenticated = false,
   });
@@ -23,12 +25,14 @@ class UserState {
   UserState copyWith({
     String? userId,
     String? email,
+    String? name,
     UserRole? role,
     bool? isAuthenticated,
   }) {
     return UserState(
       userId: userId ?? this.userId,
       email: email ?? this.email,
+      name: name ?? this.name,
       role: role ?? this.role,
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
     );
@@ -42,11 +46,12 @@ class AuthService extends _$AuthService {
     return const UserState(role: UserRole.patient, isAuthenticated: false);
   }
 
-  /// Called after successful Appwrite login
-  void login(String email, UserRole role) {
+  /// Called after successful Appwrite login — stores real user ID
+  void login(String email, UserRole role, {String? userId, String? name}) {
     state = UserState(
-      userId: 'appwrite-user',
+      userId: userId,
       email: email,
+      name: name,
       role: role,
       isAuthenticated: true,
     );
@@ -66,6 +71,8 @@ class AuthService extends _$AuthService {
     final sessionId = prefs.getString('appwrite_session');
     final roleString = prefs.getString('user_role');
     final email = prefs.getString('user_email');
+    final userId = prefs.getString('appwrite_user_id');
+    final name = prefs.getString('user_name');
 
     if (sessionId != null && roleString != null) {
       final role = UserRole.values.firstWhere(
@@ -73,8 +80,9 @@ class AuthService extends _$AuthService {
         orElse: () => UserRole.patient,
       );
       state = UserState(
-        userId: prefs.getString('appwrite_user_id'),
+        userId: userId,
         email: email,
+        name: name,
         role: role,
         isAuthenticated: true,
       );

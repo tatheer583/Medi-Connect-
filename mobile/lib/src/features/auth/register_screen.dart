@@ -78,6 +78,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_role', role.name);
       await prefs.setString('user_email', _emailCtrl.text.trim());
+      await prefs.setString('user_name', _nameCtrl.text.trim());
 
       if (mounted) {
         AppToast.show(context, 'Account created! Please verify your email.', type: ToastType.success);

@@ -44,9 +44,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_email', user.email);
+      await prefs.setString('user_name', user.name);
+      await prefs.setString('user_role', (widget.role ?? UserRole.patient).name);
 
       if (!mounted) return;
-      ref.read(authServiceProvider.notifier).login(user.email, widget.role ?? UserRole.patient);
+      ref.read(authServiceProvider.notifier).login(
+        user.email,
+        widget.role ?? UserRole.patient,
+        userId: user.$id,
+        name: user.name,
+      );
       AppToast.show(context, 'Welcome back!', type: ToastType.success);
       context.go('/dashboard');
     } catch (e) {

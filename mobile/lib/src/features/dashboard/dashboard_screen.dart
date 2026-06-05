@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:mediconnect_mobile/src/config/appwrite_client.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:mediconnect_mobile/src/features/chat/chat_list_screen.dart';
 import 'package:mediconnect_mobile/src/features/profile/profile_screen.dart';
 import 'package:mediconnect_mobile/src/routing/app_router.dart';
 import 'package:mediconnect_mobile/src/services/auth_service.dart';
-import 'package:mediconnect_mobile/src/shared/widgets/app_toast.dart';
+import 'package:mediconnect_mobile/src/services/database_service.dart';
+import 'package:mediconnect_mobile/src/shared/widgets/shimmer_loader.dart';
+import 'package:mediconnect_mobile/src/theme/app_theme.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -24,293 +26,243 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final isDoctor = userState.role == UserRole.doctor;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isDoctor ? 'Doctor Dashboard' : 'Patient Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
-            onPressed: () async {
-              await ref.read(authServiceProvider.notifier).logout();
-              if (context.mounted) context.go('/');
-            },
-          ),
-        ],
-      ),
-      body: _buildBody(userState.role),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        items: isDoctor ? _doctorNavItems() : _patientNavItems(),
-      ),
-      floatingActionButton: !isDoctor && _selectedIndex == 0
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                context.pushNamed(AppRoute.doctorSearch.name);
-              },
-              label: const Text('Book Appointment'),
-              icon: const Icon(Icons.add),
-            )
-          : null,
+      backgroundColor: AppColors.background,
+      body: _buildBody(userState),
+      bottomNavigationBar: _buildBottomNav(isDoctor),
     );
   }
 
-  Widget _buildBody(UserRole role) {
-    if (_selectedIndex == 1) return const ChatListScreen();
-    if (_selectedIndex == 2) return const ProfileScreen();
-    
-    if (role == UserRole.doctor) {
-      return _DoctorDashboardBody(index: _selectedIndex);
-    } else {
-      return _PatientDashboardBody(index: _selectedIndex);
+  Widget _buildBody(UserState userState) {
+    final isDoctor = userState.role == UserRole.doctor;
+    switch (_selectedIndex) {
+      case 1:
+        return const ChatListScreen();
+      case 2:
+        return const ProfileScreen();
+      default:
+        return isDoctor
+            ? _DoctorDashboardBody(userState: userState)
+            : _PatientDashboardBody(userState: userState);
     }
   }
 
-  List<BottomNavigationBarItem> _patientNavItems() {
-    return const [
-      BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-      BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Messages'),
-      BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-    ];
-  }
-
-  List<BottomNavigationBarItem> _doctorNavItems() {
-    return const [
-      BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: 'Schedule'),
-      BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Messages'),
-      BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Profile'),
-    ];
+  Widget _buildBottomNav(bool isDoctor) {
+    return BottomNavigationBar(
+      currentIndex: _selectedIndex,
+      onTap: (i) => setState(() => _selectedIndex = i),
+      selectedItemColor: AppColors.primary,
+      unselectedItemColor: AppColors.textHint,
+      backgroundColor: Colors.white,
+      elevation: 12,
+      type: BottomNavigationBarType.fixed,
+      selectedLabelStyle: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
+      unselectedLabelStyle: GoogleFonts.inter(fontSize: 11),
+      items: isDoctor
+          ? const [
+              BottomNavigationBarItem(icon: Icon(Icons.calendar_month_outlined), activeIcon: Icon(Icons.calendar_month), label: 'Schedule'),
+              BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), activeIcon: Icon(Icons.chat_bubble), label: 'Messages'),
+              BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
+            ]
+          : const [
+              BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
+              BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), activeIcon: Icon(Icons.chat_bubble), label: 'Messages'),
+              BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
+            ],
+    );
   }
 }
 
-class _PatientDashboardBody extends StatelessWidget {
-  final int index;
-  const _PatientDashboardBody({required this.index});
+// ─── Patient Dashboard ────────────────────────────────────────────────────────
+
+class _PatientDashboardBody extends ConsumerStatefulWidget {
+  final UserState userState;
+  const _PatientDashboardBody({required this.userState});
+
+  @override
+  ConsumerState<_PatientDashboardBody> createState() => _PatientDashboardBodyState();
+}
+
+class _PatientDashboardBodyState extends ConsumerState<_PatientDashboardBody> {
+  List<Map<String, dynamic>> _appointments = [];
+  List<Map<String, dynamic>> _reminders = [];
+  bool _loadingAppts = true;
+  bool _loadingReminders = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final userId = widget.userState.userId ?? '';
+    if (userId.isEmpty) {
+      setState(() { _loadingAppts = false; _loadingReminders = false; });
+      return;
+    }
+    _loadAppointments(userId);
+    _loadReminders(userId);
+  }
+
+  Future<void> _loadAppointments(String userId) async {
+    try {
+      final docs = await DatabaseService().getPatientAppointments(userId);
+      if (mounted) {
+        setState(() {
+          _appointments = docs.take(3).map((d) => d.data).toList();
+          _loadingAppts = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingAppts = false);
+    }
+  }
+
+  Future<void> _loadReminders(String userId) async {
+    try {
+      final docs = await DatabaseService().getUserReminders(userId);
+      if (mounted) {
+        setState(() {
+          _reminders = docs.take(3).map((d) => {...d.data, '\$id': d.$id}).toList();
+          _loadingReminders = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingReminders = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+    final name = widget.userState.name ??
+        widget.userState.email?.split('@').first ??
+        'Patient';
+
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: CustomScrollView(
+        slivers: [
+          // Gradient header
+          SliverToBoxAdapter(child: _buildHeader(context, name)),
+
+          // Quick actions
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+              child: _buildQuickActions(context),
+            ),
+          ),
+
+          // Appointments section
+          SliverToBoxAdapter(
+            child: _buildSectionHeader(
+              context,
+              title: 'Upcoming Appointments',
+              actionLabel: 'See All',
+              onAction: () => context.pushNamed(AppRoute.appointments.name),
+            ),
+          ),
+          SliverToBoxAdapter(child: _buildAppointmentsSection()),
+
+          // Reminders section
+          SliverToBoxAdapter(
+            child: _buildSectionHeader(
+              context,
+              title: 'Medicine Reminders',
+              actionLabel: 'Manage',
+              onAction: () => context.pushNamed(AppRoute.reminders.name),
+            ),
+          ),
+          SliverToBoxAdapter(child: _buildRemindersSection()),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 32)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, String name) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 56, 20, 28),
+      decoration: const BoxDecoration(
+        gradient: AppColors.gradientBlueDiag,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(28),
+          bottomRight: Radius.circular(28),
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHealthCardSummary(),
-          const SizedBox(height: 24),
-          _buildQuickActions(context),
-          const SizedBox(height: 24),
-          const Text(
-            'Upcoming Appointments',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Hello, $name 👋',
+                      style: GoogleFonts.poppins(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      'How are you feeling today?',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () => context.pushNamed(AppRoute.reminders.name),
+                child: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.notifications_outlined, color: Colors.white),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          _buildAppointmentCard(
-            context,
-            doctorName: 'Dr. Ahmed Raza',
-            specialty: 'Cardiologist',
-            date: 'Tomorrow, 10:30 AM',
-            status: 'Confirmed',
+          const SizedBox(height: 20),
+          // Stats row
+          Row(
+            children: [
+              _buildStatChip(Icons.calendar_today_outlined, '${_appointments.length}', 'Appointments'),
+              const SizedBox(width: 12),
+              _buildStatChip(Icons.medication_outlined, '${_reminders.length}', 'Reminders'),
+            ],
           ),
-          const SizedBox(height: 24),
-          const Text(
-            'Medicine Reminders',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          _buildMedicineCard(
-            name: 'Metformin',
-            dosage: '500mg',
-            time: '08:00 AM',
-            taken: true,
-          ),
-          _buildMedicineCard(
-            name: 'Lisinopril',
-            dosage: '10mg',
-            time: '09:00 PM',
-            taken: false,
-          ),
-          const SizedBox(height: 24),
-          _PingButton(),
         ],
       ),
     );
   }
 
-  Widget _buildHealthCardSummary() {
-    return Card(
-      color: Colors.blue.shade50,
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
+  Widget _buildStatChip(IconData icon, String value, String label) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(14),
+        ),
         child: Row(
           children: [
-            const CircleAvatar(
-              radius: 30,
-              backgroundColor: Colors.blue,
-              child: Icon(Icons.person, color: Colors.white, size: 30),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Fatima Bibi',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  Text('Blood Group: B+ | Age: 42'),
-                  Text('Next Checkup: May 20, 2026'),
-                ],
-              ),
-            ),
-            const Icon(Icons.qr_code, size: 40, color: Colors.blue),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickActions(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        _buildActionItem(context, Icons.file_copy_outlined, 'Lab Reports', () {
-          context.pushNamed(AppRoute.labResults.name);
-        }),
-        _buildActionItem(context, Icons.medication_outlined, 'Prescriptions', () {
-          context.pushNamed(AppRoute.prescriptionView.name);
-        }),
-        _buildActionItem(context, Icons.history_outlined, 'History', () {}),
-      ],
-    );
-  }
-
-  Widget _buildActionItem(BuildContext context, IconData icon, String label, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 25,
-            backgroundColor: Colors.blue.shade50,
-            child: Icon(icon, color: Colors.blue),
-          ),
-          const SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontSize: 12)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAppointmentCard(
-    BuildContext context, {
-    required String doctorName,
-    required String specialty,
-    required String date,
-    required String status,
-  }) {
-    return Card(
-      child: ListTile(
-        onTap: () => context.pushNamed(AppRoute.prescriptionView.name),
-        leading: const CircleAvatar(child: Icon(Icons.medical_services)),
-        title: Text(doctorName),
-        subtitle: Text('$specialty • $date'),
-        trailing: Chip(
-          label: Text(status),
-          backgroundColor: Colors.green.shade50,
-          labelStyle: const TextStyle(color: Colors.green),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMedicineCard({
-    required String name,
-    required String dosage,
-    required String time,
-    required bool taken,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Icon(
-          taken ? Icons.check_circle : Icons.radio_button_unchecked,
-          color: taken ? Colors.green : Colors.grey,
-        ),
-        title: Text(name),
-        subtitle: Text('$dosage • $time'),
-      ),
-    );
-  }
-}
-
-class _DoctorDashboardBody extends StatelessWidget {
-  final int index;
-  const _DoctorDashboardBody({required this.index});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 5,
-      itemBuilder: (context, i) {
-        if (i == 0) {
-          return const Padding(
-            padding: EdgeInsets.only(bottom: 16),
-            child: Text(
-              "Today's Appointments",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          );
-        }
-        return _buildPatientQueueItem(
-          context,
-          patientName: 'Patient $i',
-          time: '09:${i}0 AM',
-          type: i % 2 == 0 ? 'Follow-up' : 'First Visit',
-        );
-      },
-    );
-  }
-
-  Widget _buildPatientQueueItem(
-    BuildContext context, {
-    required String patientName,
-    required String time,
-    required String type,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          children: [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const CircleAvatar(child: Icon(Icons.person)),
-              title: Text(patientName),
-              subtitle: Text(time),
-              trailing: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(80, 36),
-                ),
-                onPressed: () {
-                  context.pushNamed(AppRoute.prescriptionEditor.name, extra: patientName);
-                },
-                child: const Text('Start'),
-              ),
-            ),
-            const Divider(),
-            Row(
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.auto_awesome, size: 16, color: Colors.amber),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    'AI Brief: Patient missed 2 doses of Metformin. BP was high last visit.',
-                    style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
-                  ),
-                ),
+                Text(value, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                Text(label, style: GoogleFonts.inter(fontSize: 10, color: Colors.white70)),
               ],
             ),
           ],
@@ -318,55 +270,487 @@ class _DoctorDashboardBody extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildQuickActions(BuildContext context) {
+    final actions = [
+      {'icon': Icons.search_rounded, 'label': 'Find Doctor', 'color': AppColors.primary, 'route': AppRoute.doctorSearch.name},
+      {'icon': Icons.medication_outlined, 'label': 'Prescriptions', 'color': AppColors.accent, 'route': AppRoute.prescriptionView.name},
+      {'icon': Icons.science_outlined, 'label': 'Lab Results', 'color': const Color(0xFF9C27B0), 'route': AppRoute.labResults.name},
+      {'icon': Icons.alarm_rounded, 'label': 'Reminders', 'color': const Color(0xFFF57C00), 'route': AppRoute.reminders.name},
+    ];
+
+    return GridView.count(
+      crossAxisCount: 4,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 8,
+      crossAxisSpacing: 8,
+      children: actions.map((a) {
+        final color = a['color'] as Color;
+        return GestureDetector(
+          onTap: () => context.pushNamed(a['route'] as String),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 3))],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(a['icon'] as IconData, color: color, size: 22),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  a['label'] as String,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildSectionHeader(BuildContext context, {required String title, required String actionLabel, required VoidCallback onAction}) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+          TextButton(
+            onPressed: onAction,
+            child: Text(actionLabel, style: GoogleFonts.inter(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppointmentsSection() {
+    if (_loadingAppts) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        child: Column(children: [ShimmerCard(), SizedBox(height: 8), ShimmerCard()]),
+      );
+    }
+    if (_appointments.isEmpty) {
+      return _EmptyCard(
+        icon: Icons.calendar_today_outlined,
+        message: 'No upcoming appointments',
+        actionLabel: 'Book Now',
+        onAction: () {},
+      );
+    }
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: _appointments.length,
+      itemBuilder: (_, i) => _AppointmentCard(appt: _appointments[i]),
+    );
+  }
+
+  Widget _buildRemindersSection() {
+    if (_loadingReminders) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        child: Column(children: [ShimmerCard(), SizedBox(height: 8)]),
+      );
+    }
+    if (_reminders.isEmpty) {
+      return _EmptyCard(
+        icon: Icons.medication_outlined,
+        message: 'No medicine reminders set',
+        actionLabel: 'Add Reminder',
+        onAction: () {},
+      );
+    }
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: _reminders.length,
+      itemBuilder: (_, i) => _ReminderCard(reminder: _reminders[i]),
+    );
+  }
 }
 
-class _PingButton extends StatefulWidget {
+// ─── Doctor Dashboard ────────────────────────────────────────────────────────
+
+class _DoctorDashboardBody extends ConsumerStatefulWidget {
+  final UserState userState;
+  const _DoctorDashboardBody({required this.userState});
+
   @override
-  State<_PingButton> createState() => _PingButtonState();
+  ConsumerState<_DoctorDashboardBody> createState() => _DoctorDashboardBodyState();
 }
 
-class _PingButtonState extends State<_PingButton> {
-  bool _isPinging = false;
+class _DoctorDashboardBodyState extends ConsumerState<_DoctorDashboardBody> {
+  List<Map<String, dynamic>> _appointments = [];
+  bool _loading = true;
 
-  Future<void> _sendPing() async {
-    setState(() => _isPinging = true);
+  @override
+  void initState() {
+    super.initState();
+    _loadAppointments();
+  }
+
+  Future<void> _loadAppointments() async {
+    final doctorId = widget.userState.userId ?? '';
+    if (doctorId.isEmpty) {
+      setState(() => _loading = false);
+      return;
+    }
     try {
-      await client.ping();
+      final docs = await DatabaseService().getDoctorAppointments(doctorId);
       if (mounted) {
-        AppToast.show(context, 'Ping successful! Appwrite is connected.', type: ToastType.success);
+        setState(() {
+          _appointments = docs.map((d) => {...d.data, '\$id': d.$id}).toList();
+          _loading = false;
+        });
       }
-    } catch (e) {
-      if (mounted) {
-        AppToast.show(context, 'Ping failed: ${e.toString()}', type: ToastType.error);
-      }
-    } finally {
-      if (mounted) setState(() => _isPinging = false);
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: _isPinging ? null : _sendPing,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF1A73E8),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
-        icon: _isPinging
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-              )
-            : const Icon(Icons.wifi_tethering_rounded),
-        label: Text(
-          _isPinging ? 'Pinging...' : 'Send a ping',
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-        ),
+    final name = widget.userState.name ??
+        widget.userState.email?.split('@').first ??
+        'Doctor';
+
+    return RefreshIndicator(
+      onRefresh: _loadAppointments,
+      child: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(20, 56, 20, 24),
+              decoration: const BoxDecoration(
+                gradient: AppColors.gradientBlueDiag,
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(28),
+                  bottomRight: Radius.circular(28),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Dr. $name',
+                            style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                        Text("Today's Schedule", style: GoogleFonts.inter(fontSize: 13, color: Colors.white70)),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        Text('${_appointments.length}',
+                            style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                        Text('Patients', style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+              child: Text("Today's Appointments",
+                  style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            ),
+          ),
+
+          _loading
+              ? SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(children: const [ShimmerCard(), SizedBox(height: 8), ShimmerCard()]),
+                  ),
+                )
+              : _appointments.isEmpty
+                  ? SliverToBoxAdapter(
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(40),
+                          child: Column(
+                            children: [
+                              Icon(Icons.event_busy_outlined, size: 64, color: AppColors.textHint.withValues(alpha: 0.5)),
+                              const SizedBox(height: 12),
+                              Text('No appointments today',
+                                  style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 15)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  : SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (_, i) => Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          child: _DoctorAppointmentCard(
+                            appt: _appointments[i],
+                            onStart: () => context.pushNamed(
+                              AppRoute.prescriptionEditor.name,
+                              extra: {
+                                'name': _appointments[i]['patientName'] ?? 'Patient',
+                                'id': _appointments[i]['patientId'] ?? '',
+                              },
+                            ),
+                          ),
+                        ),
+                        childCount: _appointments.length,
+                      ),
+                    ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 32)),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Shared Cards ─────────────────────────────────────────────────────────────
+
+class _AppointmentCard extends StatelessWidget {
+  final Map<String, dynamic> appt;
+  const _AppointmentCard({required this.appt});
+
+  @override
+  Widget build(BuildContext context) {
+    final status = appt['status'] as String? ?? 'pending';
+    final statusColor = status == 'confirmed'
+        ? AppColors.success
+        : status == 'completed'
+            ? AppColors.textSecondary
+            : AppColors.warning;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.person_rounded, color: AppColors.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  appt['doctorName'] as String? ?? 'Doctor',
+                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                ),
+                Text(
+                  '${appt['specialty'] ?? ''} • ${appt['date'] ?? ''}',
+                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              status[0].toUpperCase() + status.substring(1),
+              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: statusColor),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DoctorAppointmentCard extends StatelessWidget {
+  final Map<String, dynamic> appt;
+  final VoidCallback onStart;
+  const _DoctorAppointmentCard({required this.appt, required this.onStart});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: AppColors.accent.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.person_rounded, color: AppColors.accent),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  appt['patientName'] as String? ?? 'Patient',
+                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                ),
+                Text(
+                  appt['timeSlot'] as String? ?? appt['date'] as String? ?? '',
+                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: onStart,
+            style: TextButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text('Start', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReminderCard extends StatelessWidget {
+  final Map<String, dynamic> reminder;
+  const _ReminderCard({required this.reminder});
+
+  @override
+  Widget build(BuildContext context) {
+    final taken = reminder['takenToday'] as bool? ?? false;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: (taken ? AppColors.success : AppColors.warning).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              taken ? Icons.check_circle_rounded : Icons.medication_rounded,
+              color: taken ? AppColors.success : AppColors.warning,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  reminder['medicineName'] as String? ?? '',
+                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                ),
+                Text(
+                  '${reminder['dosage'] ?? ''} • ${reminder['time'] ?? ''}',
+                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: (taken ? AppColors.success : AppColors.warning).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              taken ? 'Taken' : 'Pending',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: taken ? AppColors.success : AppColors.warning,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyCard extends StatelessWidget {
+  final IconData icon;
+  final String message;
+  final String actionLabel;
+  final VoidCallback onAction;
+  const _EmptyCard({required this.icon, required this.message, required this.actionLabel, required this.onAction});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.textHint, size: 28),
+          const SizedBox(width: 12),
+          Expanded(child: Text(message, style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 13))),
+          TextButton(
+            onPressed: onAction,
+            child: Text(actionLabel, style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
+          ),
+        ],
       ),
     );
   }
