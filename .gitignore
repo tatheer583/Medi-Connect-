@@ -62,4 +62,16 @@ google-services.json
 GoogleService-Info.plist
 
 # ─── Releases (APKs uploaded via GitHub Releases, not git) ───
-releases/*.apk
+releases/
+*.apk
+*.zip
+*.aar
+
+# ─── Temp / unnecessary docs ──────────────────────────────────
+APK_*.md
+DEPLOYMENT_GUIDE.md
+GITHUB_UPLOAD_SUMMARY.md
+PRODUCTION_ENHANCEMENTS.md
+RELEASE_NOTES.md
+WORKFLOW_FIX.md
+DIAGNOSTIC_REPORT.md

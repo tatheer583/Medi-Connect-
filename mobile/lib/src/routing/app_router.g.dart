@@ -6,46 +6,19 @@ part of 'app_router.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-// GENERATED CODE - DO NOT MODIFY BY HAND
-// ignore_for_file: type=lint, type=warning
-
-@ProviderFor(goRouter)
-final goRouterProvider = GoRouterProvider._();
-
-final class GoRouterProvider
-    extends $FunctionalProvider<GoRouter, GoRouter, GoRouter>
-    with $Provider<GoRouter> {
-  GoRouterProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'goRouterProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$goRouterHash();
-
-  @$internal
-  @override
-  $ProviderElement<GoRouter> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
-
-  @override
-  GoRouter create(Ref ref) {
-    return goRouter(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(GoRouter value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<GoRouter>(value),
-    );
-  }
-}
-
 String _$goRouterHash() => r'9225ce129dd509582ebbcac7d6359472c081aef3';
+
+/// See also [goRouter].
+@ProviderFor(goRouter)
+final goRouterProvider = AutoDisposeProvider<GoRouter>.internal(
+  goRouter,
+  name: r'goRouterProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$goRouterHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef GoRouterRef = AutoDisposeProviderRef<GoRouter>;
