@@ -27,30 +27,38 @@ jobs:
           java-version: '17'
 
       # ── 3. Flutter ─────────────────────────────────────────────────────────
-      - name: Set up Flutter
+      # Flutter 3.27.4 ships Dart 3.6.4
+      # go_router 15.x requires Dart >=3.6 — compatible
+      # DO NOT use cache:true — it served stale Flutter 3.32.2 from previous runs
+      - name: Set up Flutter 3.27.4
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.2'
+          flutter-version: '3.27.4'
           channel: stable
-          cache: true
+          cache: false
 
-      # ── 4. Dependencies ────────────────────────────────────────────────────
+      # ── 4. Verify Flutter & Dart version ──────────────────────────────────
+      - name: Verify Flutter version
+        run: flutter --version
+
+      # ── 5. Dependencies ────────────────────────────────────────────────────
+      # pubspec.lock is deleted from repo — fresh resolution every build
       - name: Install Flutter dependencies
         working-directory: mobile
         run: flutter pub get
 
-      # ── 5. Build ───────────────────────────────────────────────────────────
+      # ── 6. Build ───────────────────────────────────────────────────────────
       - name: Build release APK
         working-directory: mobile
         run: flutter build apk --release
 
-      # ── 6. Rename APK ──────────────────────────────────────────────────────
+      # ── 7. Rename APK ──────────────────────────────────────────────────────
       - name: Rename APK
         run: |
           cp mobile/build/app/outputs/flutter-apk/app-release.apk \
              mediconnect-v1.0.0.apk
 
-      # ── 7. Upload artifact (always kept) ───────────────────────────────────
+      # ── 8. Upload artifact (always kept for 30 days) ──────────────────────
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -58,14 +66,14 @@ jobs:
           path: mediconnect-v1.0.0.apk
           retention-days: 30
 
-      # ── 8. Delete existing release/tag if present ─────────────────────────
-      - name: Delete existing v1.0.0 release (if any)
+      # ── 9. Delete existing release/tag if present ─────────────────────────
+      - name: Delete existing release (if any)
         run: |
           gh release delete v1.0.0 --yes --cleanup-tag 2>/dev/null || true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── 9. Create fresh release + attach APK ──────────────────────────────
+      # ── 10. Create fresh release + attach APK ─────────────────────────────
       - name: Create GitHub Release with APK
         uses: softprops/action-gh-release@v2
         with:
@@ -76,12 +84,8 @@ jobs:
 
             AI-powered Healthcare Management Platform
 
-            ---
-
             ### ⬇️ Download
-            Download **mediconnect-v1.0.0.apk** below and install on any Android 8.0+ device.
-
-            ---
+            Download **mediconnect-v1.0.0.apk** below and install on Android 8.0+
 
             ### ✨ Features
             - 📅 Appointment Booking with doctor search
@@ -92,23 +96,16 @@ jobs:
             - 🤖 AI-powered patient summaries (OpenAI)
             - 🎨 Modern professional UI
 
-            ---
-
             ### 📱 Installation
             1. Download `mediconnect-v1.0.0.apk`
             2. Enable **Unknown Sources** in Android Settings
             3. Open the APK file and tap **Install**
-            4. Launch the app, create account, select role
+            4. Launch app, create account, select role
 
             ### 📋 Requirements
             - Android 8.0 (API 26) or higher
             - Internet connection
             - ~55 MB free storage
-
-            ---
-
-            ### 🔧 Tech Stack
-            Flutter · Appwrite · OpenAI · Riverpod · GoRouter
           files: mediconnect-v1.0.0.apk
           draft: false
           prerelease: false
