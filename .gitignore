@@ -22,6 +22,7 @@ mobile/*.iml
 mobile/android/.gradle/
 mobile/android/local.properties
 mobile/android/key.properties
+mobile/android/.kotlin/
 mobile/ios/.symlinks/
 mobile/ios/Pods/
 mobile/ios/Flutter/Flutter.framework
@@ -29,6 +30,13 @@ mobile/ios/Flutter/Flutter.podspec
 mobile/linux/.dart_tool/
 mobile/macos/.dart_tool/
 mobile/windows/.dart_tool/
+
+# ─── Unused platform targets (Android-only app) ───────────────
+mobile/ios/
+mobile/macos/
+mobile/linux/
+mobile/windows/
+mobile/web/
 
 # ─── React Native ─────────────────────────────────────────────
 mobile-rn/node_modules/
@@ -61,17 +69,12 @@ Thumbs.db
 google-services.json
 GoogleService-Info.plist
 
-# ─── Releases (APKs uploaded via GitHub Releases, not git) ───
+# ─── Releases / Binaries ──────────────────────────────────────
 releases/
 *.apk
 *.zip
 *.aar
 
-# ─── Temp / unnecessary docs ──────────────────────────────────
+# ─── Misc temp docs ───────────────────────────────────────────
 APK_*.md
-DEPLOYMENT_GUIDE.md
-GITHUB_UPLOAD_SUMMARY.md
-PRODUCTION_ENHANCEMENTS.md
-RELEASE_NOTES.md
-WORKFLOW_FIX.md
 DIAGNOSTIC_REPORT.md

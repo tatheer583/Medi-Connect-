@@ -1,170 +1,176 @@
 <h1 align="center">🏥 MediConnect Smart</h1>
 
 <p align="center">
-  <strong>AI-Powered Healthcare Management Platform</strong>
+  <strong>AI-Powered Healthcare Management Platform</strong><br/>
+  Built with Flutter · Appwrite · OpenAI
 </p>
 
 <p align="center">
-  <a href="https://github.com/tatheer583/Medi-Connect-/releases/download/v1.0.0/mediconnect-v1.0.0.apk">
-    <img src="https://img.shields.io/badge/Download-v1.0.0_APK-blue?style=for-the-badge&logo=android" alt="Download APK" />
+  <a href="https://github.com/tatheer583/Medi-Connect-/releases/latest">
+    <img src="https://img.shields.io/badge/Download-Latest APK-blue?style=for-the-badge&logo=android" alt="Download APK" />
   </a>
-  <br />
-  <img src="https://img.shields.io/badge/Flutter-3.11+-02569B?logo=flutter&logoColor=white" alt="Flutter Version" />
-  <img src="https://img.shields.io/badge/Node.js-16+-339933?logo=nodedotjs&logoColor=white" alt="Node.js Version" />
-  <img src="https://img.shields.io/badge/Appwrite-Cloud-F02E65?logo=appwrite&logoColor=white" alt="Appwrite Cloud" />
-  <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License" />
+  &nbsp;
+  <img src="https://img.shields.io/badge/Flutter-3.29+-02569B?logo=flutter" />
+  &nbsp;
+  <img src="https://img.shields.io/badge/Appwrite-Cloud-F02E65?logo=appwrite" />
+  &nbsp;
+  <img src="https://img.shields.io/badge/License-MIT-green" />
 </p>
 
 ---
 
-## 📖 Table of Contents
-- [About the Project](#-about-the-project)
-- [Core Features](#-core-features)
-- [System Architecture](#-system-architecture)
-- [Tech Stack](#-tech-stack)
-- [Installation & Setup](#-installation--setup)
-- [Environment Variables](#-environment-variables)
-- [Screenshots](#-screenshots)
-- [Contributing](#-contributing)
-- [License](#-license)
+## About
+
+MediConnect Smart connects doctors, clinics, and patients in one app. Patients can book appointments, view prescriptions, and manage medicines. Doctors can manage their schedule and write prescriptions. OpenAI generates AI-powered patient summaries before each appointment.
 
 ---
 
-## 🚀 About the Project
+## Features
 
-**MediConnect Smart** is a comprehensive, AI-powered healthcare application designed to bridge the gap between healthcare providers, clinics, and patients. By providing a unified mobile platform, MediConnect streamlines appointment scheduling, enables secure doctor-patient communication, and leverages the power of OpenAI to generate intelligent clinical summaries and automate routine healthcare management tasks.
+### For Patients
+- Book appointments with doctors (search by name or specialty)
+- View and download digital prescriptions as PDF
+- Set daily medicine reminders with local notifications
+- Real-time chat with doctors
+- Upload and view lab results
+- Personal health dashboard
 
-### Why MediConnect?
-- **Efficiency**: Automates routine tasks for clinics and doctors.
-- **Accessibility**: Gives patients easy access to their health records, prescriptions, and doctors.
-- **Intelligence**: Utilizes cutting-edge AI to provide clinical insights and automated summaries.
+### For Doctors
+- View today's appointment schedule
+- Create digital prescriptions
+- AI-powered patient summaries before consultations
+- Real-time chat with patients
 
----
-
-## ✨ Core Features
-
-### 👨‍⚕️ For Doctors
-- **Appointment Management**: Seamlessly view, accept, or reschedule patient appointments.
-- **Digital Prescriptions**: Generate and share digital prescriptions securely.
-- **Patient Communication**: Real-time encrypted chat with patients.
-- **AI Patient Summaries**: Instant, AI-generated summaries of patient histories and consultations.
-
-### 👤 For Patients
-- **Book Appointments**: Find and book appointments with available doctors.
-- **Medicine Reminders**: Automated alerts for timely medication.
-- **Secure Chat**: Direct communication with healthcare providers.
-- **Health Records**: Track lab results, prescriptions, and historical medical data.
-
-### 🏥 For Clinics
-- **Clinic Dashboard**: Comprehensive overview of clinic operations.
-- **Staff Management**: Add and manage clinic staff, doctors, and receptionists.
-- **Analytics**: Gain insights into appointment trends, patient inflow, and overall clinic performance.
+### For Clinics
+- Manage clinic profile and staff
+- Overview of appointments and activity
 
 ---
 
-## 🏗️ System Architecture
+## Tech Stack
 
-MediConnect operates on a robust dual-layer architecture:
-1. **Frontend (Mobile App)**: Built with Flutter and Riverpod for state management, providing a smooth, cross-platform experience.
-2. **Backend Services**: Powered by Node.js and Express, integrated closely with Appwrite Cloud for authentication and database management, and OpenAI for intelligent data processing.
-
----
-
-## 🛠️ Tech Stack
-
-| Component | Technology | Description |
-|-----------|------------|-------------|
-| **Mobile App** | Flutter & Dart | Cross-platform UI development |
-| **State Management**| Riverpod | Reactive caching and data binding |
-| **Backend API** | Node.js, Express, TS | RESTful APIs and business logic |
-| **BaaS** | Appwrite Cloud | Authentication, Database, Storage |
-| **Artificial Intelligence**| OpenAI (GPT-4o-mini) | AI summaries and automated insights |
+| Layer | Technology |
+|---|---|
+| Mobile | Flutter 3.29+ · Dart · Riverpod · GoRouter |
+| Backend | Node.js · Express · TypeScript |
+| Database | Appwrite Cloud (BaaS) |
+| AI | OpenAI GPT-4o-mini |
+| Notifications | Flutter Local Notifications |
+| PDF | pdf · printing packages |
 
 ---
 
-## 💻 Installation & Setup
+## Getting Started
 
 ### Prerequisites
-Make sure you have the following installed on your local machine:
-- [Flutter SDK](https://docs.flutter.dev/get-started/install) (v3.11 or higher)
-- [Node.js](https://nodejs.org/) (v16 or higher)
-- An active [Appwrite Cloud](https://appwrite.io/) account
-- An active [OpenAI](https://openai.com/) API key
+- [Flutter SDK](https://flutter.dev) 3.29+
+- [Node.js](https://nodejs.org) 16+
+- [Appwrite Cloud](https://cloud.appwrite.io) account
+- OpenAI API key
 
-### 1. Clone the Repository
+### Clone
 ```bash
 git clone https://github.com/tatheer583/Medi-Connect-.git
 cd Medi-Connect-
 ```
 
-### 2. Backend Setup
-Navigate to the backend directory, install dependencies, and start the server:
+### Backend
 ```bash
 cd backend-node
+cp .env.example .env
+# Fill in your Appwrite and OpenAI credentials
 npm install
 npm run dev
 ```
 
-### 3. Mobile App Setup
-Open a new terminal, navigate to the mobile directory, install dependencies, and launch the app:
+### Mobile App
 ```bash
 cd mobile
 flutter pub get
 flutter run
 ```
 
+### Appwrite Database Setup
+Run the automated setup script:
+```powershell
+.\setup_appwrite.ps1
+```
+
+Or create manually in [Appwrite Console](https://cloud.appwrite.io):
+- Database: `mediconnect_db`
+- Collections: `appointments`, `prescriptions`, `chat_messages`, `lab_results`, `medicine_reminders`, `doctors`, `user_profiles`
+- Storage bucket: `lab_results_files`
+
 ---
 
-## 🔐 Environment Variables
+## Environment Variables
 
-To run this project, you will need to add the following environment variables.
-
-### Backend (`backend-node/.env`)
-Create a `.env` file in the `backend-node` directory based on the `.env.example`:
+**`backend-node/.env`** (copy from `.env.example`):
 ```env
-APPWRITE_ENDPOINT="https://cloud.appwrite.io/v1"
-APPWRITE_PROJECT_ID="your_project_id"
-APPWRITE_API_KEY="your_api_key"
-OPENAI_API_KEY="your_openai_api_key"
-PORT=3000
+APPWRITE_ENDPOINT=https://fra.cloud.appwrite.io/v1
+APPWRITE_PROJECT_ID=your_project_id
+APPWRITE_API_KEY=your_api_key
+APPWRITE_DATABASE_ID=mediconnect_db
+OPENAI_API_KEY=your_openai_key
+JWT_SECRET=your_jwt_secret
+PORT=5000
 ```
 
 ---
 
-## 📸 Screenshots
+## APK Download
 
-*(Replace these with actual screenshots of your application)*
+The release APK is built automatically via GitHub Actions on every push to `main`.
 
-<p align="center">
-  <img src="https://via.placeholder.com/250x500.png?text=Login+Screen" alt="Login Screen" width="200" style="margin-right: 10px;"/>
-  <img src="https://via.placeholder.com/250x500.png?text=Home+Dashboard" alt="Home Dashboard" width="200" style="margin-right: 10px;"/>
-  <img src="https://via.placeholder.com/250x500.png?text=Doctor+Chat" alt="Doctor Chat" width="200" />
-</p>
+👉 [Download latest APK](https://github.com/tatheer583/Medi-Connect-/releases/latest)
+
+**Install on Android:**
+1. Download the APK
+2. Enable *Unknown Sources* in Android settings
+3. Tap the APK to install
+4. Create an account, select your role, and start using
 
 ---
 
-## 🤝 Contributing
+## Project Structure
 
-Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+```
+Medi-Connect-/
+├── mobile/               # Flutter Android app
+│   ├── android/          # Android native config
+│   └── lib/
+│       └── src/
+│           ├── config/   # Appwrite client
+│           ├── features/ # Screens (auth, dashboard, chat, etc.)
+│           ├── services/ # Appwrite, AI, PDF, notifications
+│           ├── shared/   # Reusable widgets
+│           └── theme/    # Colors, fonts, theme
+├── backend-node/         # Node.js TypeScript API
+│   └── src/
+│       ├── controllers/
+│       ├── services/
+│       ├── routes/
+│       └── middleware/
+├── .github/workflows/    # GitHub Actions (APK build + release)
+└── setup_appwrite.ps1    # Automated Appwrite setup
+```
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
+---
+
+## Contributing
+
+1. Fork the repo
+2. Create a branch: `git checkout -b feature/my-feature`
+3. Commit: `git commit -m "Add my feature"`
+4. Push: `git push origin feature/my-feature`
 5. Open a Pull Request
 
 ---
 
-## 📝 License
+## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
-## 📞 Support
-
-For support, please open an issue on the [GitHub Issues](https://github.com/tatheer583/Medi-Connect-/issues) page.
-
-<p align="center">
-  Built with ❤️ by the MediConnect Team
-</p>
+<p align="center">Built with ❤️ by the MediConnect Team</p>
