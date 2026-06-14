@@ -128,7 +128,7 @@ class AppwriteService {
 
   Future<void> verifyEmail(String userId, String secret, String code) async {
     try {
-      await _account.updateEmailVerification(
+      await _account.updateVerification(
         userId: userId,
         secret: secret,
       );
