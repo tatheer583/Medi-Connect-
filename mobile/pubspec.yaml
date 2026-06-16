@@ -61,3 +61,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+dependency_overrides:
+  flutter_web_auth_2: ^4.3.1
+

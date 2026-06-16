@@ -39,7 +39,7 @@ enum AppRoute {
 }
 
 @riverpod
-GoRouter goRouter(Ref ref) {
+GoRouter goRouter(GoRouterRef ref) {
   return GoRouter(
     initialLocation: '/',
     routes: [
