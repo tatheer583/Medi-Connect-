@@ -6,12 +6,6 @@
   <p><strong>Next-Generation Healthcare Management Platform Powered by AI</strong></p>
 
   <p>
-    <a href="https://github.com/tatheer583/Medi-Connect-/actions">
-      <img src="https://img.shields.io/github/actions/workflow/status/tatheer583/Medi-Connect-/build.yml?branch=main&style=for-the-badge&logo=github" alt="Build Status" />
-    </a>
-    <a href="https://github.com/tatheer583/Medi-Connect-/releases/latest">
-      <img src="https://img.shields.io/github/v/release/tatheer583/Medi-Connect-?style=for-the-badge&color=blue&logo=android" alt="Latest Release" />
-    </a>
     <img src="https://img.shields.io/badge/Flutter-3.29+-02569B?style=for-the-badge&logo=flutter" alt="Flutter Version" />
     <img src="https://img.shields.io/badge/Appwrite-Cloud-F02E65?style=for-the-badge&logo=appwrite" alt="Appwrite" />
   </p>
@@ -137,19 +131,7 @@ flutter run
 
 ---
 
-## 📦 Releases & APK Download
 
-We use **GitHub Actions** to automatically build and verify the application on every push to the `main` branch.
-
-**📥 [Download the Latest Release APK](https://github.com/tatheer583/Medi-Connect-/releases/latest)**
-
-### Installation Instructions (Android):
-1. Download the `.apk` file to your Android device.
-2. Navigate to **Settings > Security** and enable **Install from Unknown Sources**.
-3. Open the downloaded file to install MediConnect.
-4. Launch the app, register your role, and explore the platform!
-
----
 
 ## 📂 Project Structure
 
@@ -170,7 +152,6 @@ Medi-Connect-/
 │       ├── middleware/      # Authentication & validation layers
 │       ├── routes/          # Express route definitions
 │       └── services/        # Core business logic
-├── .github/workflows/       # CI/CD pipelines for automated builds
 └── setup_appwrite.ps1       # Automated database provisioning script
 ```
 
