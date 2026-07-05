@@ -1,0 +1,19 @@
+﻿src/modules/appointment/appointment.controller.ts(43,26): error TS1272: A type referenced in a decorated signature must be imported with 'import type' or a namespace import when 'isolatedModules' and 'emitDecoratorMetadata' are enabled.
+src/modules/audit/audit.service.ts(109,7): error TS2559: Type 'string[]' has no properties in common with type 'FindOptionsSelect<AuditLogEntry>'.
+src/modules/auth/auth.controller.ts(40,50): error TS1272: A type referenced in a decorated signature must be imported with 'import type' or a namespace import when 'isolatedModules' and 'emitDecoratorMetadata' are enabled.
+src/modules/auth/auth.controller.ts(62,26): error TS1272: A type referenced in a decorated signature must be imported with 'import type' or a namespace import when 'isolatedModules' and 'emitDecoratorMetadata' are enabled.
+src/modules/clinic/clinic.service.ts(42,7): error TS2559: Type 'string[]' has no properties in common with type 'FindOptionsRelations<Clinic>'.
+src/modules/clinic/clinic.service.ts(95,7): error TS2559: Type 'string[]' has no properties in common with type 'FindOptionsRelations<Branch>'.
+src/modules/clinic/clinic.service.ts(103,7): error TS2559: Type 'string[]' has no properties in common with type 'FindOptionsRelations<Branch>'.
+src/modules/doctor/doctor.controller.ts(29,26): error TS1272: A type referenced in a decorated signature must be imported with 'import type' or a namespace import when 'isolatedModules' and 'emitDecoratorMetadata' are enabled.
+src/modules/doctor/doctor.controller.ts(38,26): error TS1272: A type referenced in a decorated signature must be imported with 'import type' or a namespace import when 'isolatedModules' and 'emitDecoratorMetadata' are enabled.
+src/modules/doctor/doctor.controller.ts(59,47): error TS1272: A type referenced in a decorated signature must be imported with 'import type' or a namespace import when 'isolatedModules' and 'emitDecoratorMetadata' are enabled.
+src/modules/medical-record/medical-record.controller.ts(33,26): error TS1272: A type referenced in a decorated signature must be imported with 'import type' or a namespace import when 'isolatedModules' and 'emitDecoratorMetadata' are enabled.
+src/modules/medical-record/medical-record.controller.ts(79,26): error TS1272: A type referenced in a decorated signature must be imported with 'import type' or a namespace import when 'isolatedModules' and 'emitDecoratorMetadata' are enabled.
+src/modules/patient/patient.controller.ts(33,26): error TS1272: A type referenced in a decorated signature must be imported with 'import type' or a namespace import when 'isolatedModules' and 'emitDecoratorMetadata' are enabled.
+src/modules/patient/patient.controller.ts(79,26): error TS1272: A type referenced in a decorated signature must be imported with 'import type' or a namespace import when 'isolatedModules' and 'emitDecoratorMetadata' are enabled.
+src/modules/prescription/prescription.controller.ts(32,26): error TS1272: A type referenced in a decorated signature must be imported with 'import type' or a namespace import when 'isolatedModules' and 'emitDecoratorMetadata' are enabled.
+src/modules/prescription/prescription.controller.ts(73,26): error TS1272: A type referenced in a decorated signature must be imported with 'import type' or a namespace import when 'isolatedModules' and 'emitDecoratorMetadata' are enabled.
+src/modules/prescription/prescription.service.ts(68,7): error TS2559: Type 'string[]' has no properties in common with type 'FindOptionsRelations<Prescription>'.
+src/modules/prescription/prescription.service.ts(93,7): error TS2559: Type 'string[]' has no properties in common with type 'FindOptionsRelations<Prescription>'.
+src/modules/staff/staff.controller.ts(30,26): error TS1272: A type referenced in a decorated signature must be imported with 'import type' or a namespace import when 'isolatedModules' and 'emitDecoratorMetadata' are enabled.

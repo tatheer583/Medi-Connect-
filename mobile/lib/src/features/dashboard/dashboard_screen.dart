@@ -9,6 +9,7 @@ import 'package:mediconnect_mobile/src/services/auth_service.dart';
 import 'package:mediconnect_mobile/src/services/database_service.dart';
 import 'package:mediconnect_mobile/src/shared/widgets/shimmer_loader.dart';
 import 'package:mediconnect_mobile/src/theme/app_theme.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -243,7 +244,7 @@ class _PatientDashboardBodyState extends ConsumerState<_PatientDashboardBody> {
           ),
         ],
       ),
-    );
+    ).animate().fadeIn(duration: 600.ms, curve: Curves.easeOutQuad).slideY(begin: -0.1);
   }
 
   Widget _buildStatChip(IconData icon, String value, String label) {
@@ -318,7 +319,7 @@ class _PatientDashboardBodyState extends ConsumerState<_PatientDashboardBody> {
           ),
         );
       }).toList(),
-    );
+    ).animate().fadeIn(delay: 200.ms, duration: 500.ms).slideY(begin: 0.1);
   }
 
   Widget _buildSectionHeader(BuildContext context, {required String title, required String actionLabel, required VoidCallback onAction}) {
@@ -357,7 +358,10 @@ class _PatientDashboardBodyState extends ConsumerState<_PatientDashboardBody> {
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: _appointments.length,
-      itemBuilder: (_, i) => _AppointmentCard(appt: _appointments[i]),
+      itemBuilder: (_, i) => _AppointmentCard(appt: _appointments[i])
+          .animate(delay: (i * 100).ms)
+          .fadeIn(duration: 400.ms)
+          .slideX(begin: 0.1, curve: Curves.easeOutQuad),
     );
   }
 
@@ -381,7 +385,10 @@ class _PatientDashboardBodyState extends ConsumerState<_PatientDashboardBody> {
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: _reminders.length,
-      itemBuilder: (_, i) => _ReminderCard(reminder: _reminders[i]),
+      itemBuilder: (_, i) => _ReminderCard(reminder: _reminders[i])
+          .animate(delay: (i * 100).ms)
+          .fadeIn(duration: 400.ms)
+          .slideX(begin: 0.1, curve: Curves.easeOutQuad),
     );
   }
 }
@@ -473,7 +480,7 @@ class _DoctorDashboardBodyState extends ConsumerState<_DoctorDashboardBody> {
                   ),
                 ],
               ),
-            ),
+            ).animate().fadeIn(duration: 600.ms).slideY(begin: -0.1),
           ),
 
           SliverToBoxAdapter(
@@ -520,7 +527,7 @@ class _DoctorDashboardBodyState extends ConsumerState<_DoctorDashboardBody> {
                                 'id': _appointments[i]['patientId'] ?? '',
                               },
                             ),
-                          ),
+                          ).animate(delay: (i * 100).ms).fadeIn(duration: 400.ms).slideX(begin: 0.1, curve: Curves.easeOutQuad),
                         ),
                         childCount: _appointments.length,
                       ),

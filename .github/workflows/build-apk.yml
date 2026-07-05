@@ -1,0 +1,49 @@
+name: Build and Release Flutter APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  build:
+    name: Build APK and Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0' # Using a stable 3.x version
+          channel: 'stable'
+
+      - name: Install dependencies
+        working-directory: ./mobile
+        run: flutter pub get
+
+      - name: Build APK
+        working-directory: ./mobile
+        run: flutter build apk --release
+
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "mobile/build/app/outputs/flutter-apk/app-release.apk"
+          tag: "latest"
+          name: "Latest Development Build"
+          body: "Automated APK build from the latest push."
+          allowUpdates: true
+          makeLatest: true
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
