@@ -187,6 +187,19 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
 
+## 📦 Releases
+
+We publish release artifacts and tags on GitHub. The latest release(s) were pushed as annotated tags:
+
+- `v1.0.0` — initial release
+- `v1.0.0-20260707020741` — timestamped tag
+
+View release notes and assets on the GitHub releases page:
+
+https://github.com/tatheer583/Medi-Connect-/releases
+
+---
+
 <div align="center">
   <p>Built with ❤️ by the <strong>MediConnect Team</strong></p>
   <p><i>Transforming Healthcare through Technology & Intelligence</i></p>
