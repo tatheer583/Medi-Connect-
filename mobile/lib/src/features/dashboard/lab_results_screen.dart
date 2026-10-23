@@ -9,6 +9,7 @@ import 'package:mediconnect_mobile/src/shared/widgets/app_toast.dart';
 import 'package:mediconnect_mobile/src/shared/widgets/empty_state.dart';
 import 'package:mediconnect_mobile/src/shared/widgets/shimmer_loader.dart';
 import 'package:mediconnect_mobile/src/theme/app_theme.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class LabResultsScreen extends ConsumerStatefulWidget {
   const LabResultsScreen({super.key});
@@ -33,12 +34,15 @@ class _LabResultsScreenState extends ConsumerState<LabResultsScreen> {
     try {
       final userId = ref.read(authServiceProvider).userId ?? '';
       final docs = await DatabaseService().getPatientLabResults(userId);
-      setState(() {
-        _results = docs.map((d) => {...d.data, '\$id': d.$id}).toList();
-        _loading = false;
-      });
-    } catch (_) {
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() {
+          _results = docs.map((d) => {...d.data, '\$id': d.$id}).toList();
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load lab results: $e');
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -283,14 +287,30 @@ class _LabResultCard extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.open_in_new_rounded,
                 color: AppColors.primary, size: 20),
-            onPressed: () {
-              final url = DatabaseService()
-                  .getFileViewUrl(AppwriteDB.labResultsBucket, fileId);
-              AppToast.show(context, 'Opening: $url', type: ToastType.info);
-            },
+            onPressed: () => _openLabReport(context, fileId),
           ),
         ],
       ),
     );
+  }
+
+}
+
+Future<void> _openLabReport(BuildContext context, String fileId) async {
+  final url =
+      DatabaseService().getFileViewUrl(AppwriteDB.labResultsBucket, fileId);
+  try {
+    final uri = Uri.parse(url);
+    final launched =
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && context.mounted) {
+      AppToast.show(context, 'Could not open the report link',
+          type: ToastType.warning);
+    }
+  } catch (e) {
+    if (context.mounted) {
+      AppToast.show(context, 'Could not open report: $e',
+          type: ToastType.error);
+    }
   }
 }

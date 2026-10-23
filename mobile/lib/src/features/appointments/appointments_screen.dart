@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:mediconnect_mobile/src/routing/app_router.dart';
 import 'package:mediconnect_mobile/src/services/auth_service.dart';
 import 'package:mediconnect_mobile/src/services/database_service.dart';
 import 'package:mediconnect_mobile/src/shared/widgets/app_toast.dart';
@@ -31,11 +34,17 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
       final userId = ref.read(authServiceProvider).userId ?? '';
       final docs = await DatabaseService().getPatientAppointments(userId);
       setState(() {
-        _appointments = docs.map((d) => d.data).toList();
+        _appointments = docs
+            .map((d) => {'\$id': d.$id, ...d.data})
+            .toList();
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
       setState(() => _loading = false);
+      if (mounted) {
+        AppToast.show(context, 'Could not load appointments: $e',
+            type: ToastType.error);
+      }
     }
   }
 
@@ -85,7 +94,7 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
                   title: 'No Appointments',
                   subtitle: 'Book your first appointment with a doctor',
                   actionLabel: 'Find a Doctor',
-                  onAction: () => Navigator.pop(context),
+                  onAction: () => context.goNamed(AppRoute.doctorSearch.name),
                 )
               : RefreshIndicator(
                   onRefresh: _loadAppointments,
@@ -214,7 +223,14 @@ class _AppointmentCard extends StatelessWidget {
               const Icon(Icons.calendar_today_rounded,
                   size: 14, color: AppColors.textSecondary),
               const SizedBox(width: 6),
-              Text(appointment['date'] ?? '',
+              Text(
+                  (() {
+                    final s = appointment['date']?.toString() ?? '';
+                    final d = DateTime.tryParse(s);
+                    return d != null
+                        ? DateFormat('dd MMM yyyy').format(d)
+                        : s;
+                  })(),
                   style: GoogleFonts.inter(
                       fontSize: 13, color: AppColors.textSecondary)),
               const SizedBox(width: 16),

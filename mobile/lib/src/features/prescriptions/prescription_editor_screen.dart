@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:mediconnect_mobile/src/services/auth_service.dart';
 import 'package:mediconnect_mobile/src/services/database_service.dart';
@@ -88,6 +89,16 @@ class _PrescriptionEditorScreenState
                   });
                 });
                 Navigator.pop(ctx);
+                // Dispose after the sheet's exit animation completes.
+                Future<void>.delayed(
+                  const Duration(milliseconds: 500),
+                  () {
+                    nameCtrl.dispose();
+                    dosageCtrl.dispose();
+                    freqCtrl.dispose();
+                    durationCtrl.dispose();
+                  },
+                );
               },
             ),
           ],
@@ -125,7 +136,9 @@ class _PrescriptionEditorScreenState
       final userState = ref.read(authServiceProvider);
       await DatabaseService().createPrescription(
         doctorId: userState.userId ?? '',
-        doctorName: userState.email?.split('@').first ?? 'Doctor',
+        doctorName: (userState.name?.isNotEmpty ?? false)
+            ? userState.name!
+            : (userState.email?.split('@').first ?? 'Doctor'),
         patientId: widget.patientId ?? 'unknown',
         patientName: widget.patientName,
         diagnosis: _diagnosisCtrl.text.trim(),
@@ -135,6 +148,8 @@ class _PrescriptionEditorScreenState
 
       if (!mounted) return;
       AppToast.show(context, 'Prescription saved successfully', type: ToastType.success);
+      await Future<void>.delayed(const Duration(milliseconds: 900));
+      if (mounted) Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       AppToast.show(context, 'Failed to save: ${e.toString().replaceFirst('Exception: ', '')}',
@@ -155,12 +170,16 @@ class _PrescriptionEditorScreenState
 
     try {
       final userState = ref.read(authServiceProvider);
-      final doctorName = userState.email?.split('@').first ?? 'Doctor';
+      final prefs = await SharedPreferences.getInstance();
+      final doctorName = (userState.name?.isNotEmpty ?? false)
+          ? userState.name!
+          : (userState.email?.split('@').first ?? 'Doctor');
+      final license = prefs.getString('pmdc_license') ?? 'Licensed Physician';
       final date = DateFormat('dd MMM yyyy').format(DateTime.now());
 
       final file = await PdfService().generatePrescriptionPdf(
         doctorName: doctorName,
-        doctorLicense: 'PMDC-12345',
+        doctorLicense: license,
         patientName: widget.patientName,
         diagnosis: _diagnosisCtrl.text.trim(),
         medicines: _medicines,

@@ -31,12 +31,11 @@ mobile/linux/.dart_tool/
 mobile/macos/.dart_tool/
 mobile/windows/.dart_tool/
 
-# ─── Unused platform targets (Android-only app) ───────────────
+# ─── Platform targets (web is REQUIRED — mobile/ios/macos/linux/windows unused) ─
 mobile/ios/
 mobile/macos/
 mobile/linux/
 mobile/windows/
-mobile/web/
 
 # ─── React Native ─────────────────────────────────────────────
 mobile-rn/node_modules/

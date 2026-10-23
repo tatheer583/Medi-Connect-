@@ -1,9 +1,12 @@
+import 'package:appwrite/appwrite.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mediconnect_mobile/src/services/appwrite_service.dart';
+import 'package:mediconnect_mobile/src/services/database_service.dart';
 import 'package:mediconnect_mobile/src/services/auth_service.dart';
 import 'package:mediconnect_mobile/src/shared/widgets/app_input.dart';
 import 'package:mediconnect_mobile/src/shared/widgets/app_toast.dart';
@@ -42,17 +45,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       appwrite.initialize();
       final user = await appwrite.login(_emailCtrl.text.trim(), _passwordCtrl.text);
 
+      // Resolve the real role from the users collection so a doctor never
+      // boots as a patient just because a picker was defaulted.
+      UserRole role = widget.role ?? UserRole.patient;
+      try {
+        final profiles = await appwrite.databases.listDocuments(
+          databaseId: AppwriteDB.databaseId,
+          collectionId: AppwriteDB.users,
+          queries: [Query.equal('userId', user.$id)],
+        );
+        if (profiles.documents.isNotEmpty) {
+          final stored = profiles.documents.first.data['role']?.toString();
+          if (stored != null && stored.isNotEmpty) {
+            role = UserRole.values.firstWhere(
+              (r) => r.name == stored,
+              orElse: () => widget.role ?? UserRole.patient,
+            );
+          }
+        }
+      } catch (_) {}
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_email', user.email);
       await prefs.setString('user_name', user.name);
-      await prefs.setString('user_role', (widget.role ?? UserRole.patient).name);
+      await prefs.setString('user_role', role.name);
 
       if (!mounted) return;
       ref.read(authServiceProvider.notifier).login(
         user.email,
-        widget.role ?? UserRole.patient,
+        role,
         userId: user.$id,
-        name: user.name,
+        name: user.name.isNotEmpty ? user.name : user.email.split('@').first,
       );
       AppToast.show(context, 'Welcome back!', type: ToastType.success);
       context.go('/dashboard');
@@ -66,6 +89,61 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _forgotPassword() async {
+    final emailCtrl = TextEditingController(
+        text: _emailCtrl.text);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reset Password'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+                'We will send a password reset link to your email address.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Send Link')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await AppwriteService().requestPasswordReset(
+        emailCtrl.text.trim(),
+        redirectTo: kIsWeb ? Uri.base.removeFragment().toString() : null,
+      );
+      if (mounted) {
+        AppToast.show(
+            context, 'Reset link sent — check your inbox.',
+            type: ToastType.success);
+      }
+    } catch (e) {
+      if (mounted) {
+        AppToast.show(
+            context,
+            e.toString().replaceFirst('Exception: ', ''),
+            type: ToastType.error);
+      }
     }
   }
 
@@ -202,7 +280,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          onPressed: () {},
+                          onPressed: () => _forgotPassword(),
                           child: Text(
                             'Forgot Password?',
                             style: GoogleFonts.inter(

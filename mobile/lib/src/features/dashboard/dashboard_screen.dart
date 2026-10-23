@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:mediconnect_mobile/src/features/chat/chat_list_screen.dart';
+import 'package:mediconnect_mobile/src/features/prescriptions/ai_summary_widget.dart';
 import 'package:mediconnect_mobile/src/features/profile/profile_screen.dart';
 import 'package:mediconnect_mobile/src/routing/app_router.dart';
 import 'package:mediconnect_mobile/src/services/auth_service.dart';
@@ -110,11 +112,15 @@ class _PatientDashboardBodyState extends ConsumerState<_PatientDashboardBody> {
       final docs = await DatabaseService().getPatientAppointments(userId);
       if (mounted) {
         setState(() {
-          _appointments = docs.take(3).map((d) => d.data).toList();
+          _appointments = docs
+              .take(3)
+              .map((d) => {'\$id': d.$id, ...d.data})
+              .toList();
           _loadingAppts = false;
         });
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Failed to load appointments: $e');
       if (mounted) setState(() => _loadingAppts = false);
     }
   }
@@ -128,7 +134,8 @@ class _PatientDashboardBodyState extends ConsumerState<_PatientDashboardBody> {
           _loadingReminders = false;
         });
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Failed to load reminders: $e');
       if (mounted) setState(() => _loadingReminders = false);
     }
   }
@@ -350,7 +357,7 @@ class _PatientDashboardBodyState extends ConsumerState<_PatientDashboardBody> {
         icon: Icons.calendar_today_outlined,
         message: 'No upcoming appointments',
         actionLabel: 'Book Now',
-        onAction: () {},
+        onAction: () => context.pushNamed(AppRoute.doctorSearch.name),
       );
     }
     return ListView.builder(
@@ -377,7 +384,7 @@ class _PatientDashboardBodyState extends ConsumerState<_PatientDashboardBody> {
         icon: Icons.medication_outlined,
         message: 'No medicine reminders set',
         actionLabel: 'Add Reminder',
-        onAction: () {},
+        onAction: () => context.pushNamed(AppRoute.reminders.name),
       );
     }
     return ListView.builder(
@@ -414,20 +421,27 @@ class _DoctorDashboardBodyState extends ConsumerState<_DoctorDashboardBody> {
   }
 
   Future<void> _loadAppointments() async {
-    final doctorId = widget.userState.userId ?? '';
-    if (doctorId.isEmpty) {
+    final userId = widget.userState.userId ?? '';
+    if (userId.isEmpty) {
       setState(() => _loading = false);
       return;
     }
+    final name = widget.userState.name;
     try {
-      final docs = await DatabaseService().getDoctorAppointments(doctorId);
+      // Fall through: doctors-row → user id → display name.
+      final docs = await DatabaseService().getDoctorSchedule(userId, name);
       if (mounted) {
         setState(() {
-          _appointments = docs.map((d) => {...d.data, '\$id': d.$id}).toList();
+          _appointments = docs
+              .map((d) => {'\$id': d.$id, ...d.data})
+              .toList()
+            ..sort((a, b) =>
+                (a['date']?.toString() ?? '').compareTo(b['date']?.toString() ?? ''));
           _loading = false;
         });
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Failed to load doctor schedule: $e');
       if (mounted) setState(() => _loading = false);
     }
   }
@@ -584,7 +598,7 @@ class _AppointmentCard extends StatelessWidget {
                   style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
                 ),
                 Text(
-                  '${appt['specialty'] ?? ''} • ${appt['date'] ?? ''}',
+                  '${appt['specialty'] ?? ''} • ${_fmtApptDate(appt['date'])}',
                   style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
                 ),
               ],
@@ -614,54 +628,72 @@ class _DoctorAppointmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: AppColors.accent.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.person_rounded, color: AppColors.accent),
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  appt['patientName'] as String? ?? 'Patient',
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                Text(
-                  appt['timeSlot'] as String? ?? appt['date'] as String? ?? '',
-                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
+                child: const Icon(Icons.person_rounded, color: AppColors.accent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      appt['patientName'] as String? ?? 'Patient',
+                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                    ),
+                    Text(
+                      '${appt['timeSlot'] ?? ''} • ${_fmtApptDate(appt['date'])}',
+                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              TextButton(
+                onPressed: onStart,
+                style: TextButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: Text('Start', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: onStart,
-            style: TextButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: Text('Start', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 6),
+        AiSummaryWidget(
+          patientId: appt['patientId']?.toString() ?? '',
+          patientName: appt['patientName']?.toString() ?? 'Patient',
+        ),
+      ],
     );
   }
+}
+
+/// Formats ISO dates (yyyy-MM-dd) for display, passing anything else through.
+String _fmtApptDate(dynamic rawDate) {
+  final s = rawDate?.toString() ?? '';
+  if (s.isEmpty) return '';
+  final d = DateTime.tryParse(s);
+  if (d == null) return s;
+  return DateFormat('dd MMM yyyy').format(d);
 }
 
 class _ReminderCard extends StatelessWidget {

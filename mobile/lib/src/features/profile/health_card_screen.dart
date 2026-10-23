@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mediconnect_mobile/src/services/auth_service.dart';
 
-class HealthCardScreen extends StatelessWidget {
+class HealthCardScreen extends ConsumerWidget {
   const HealthCardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authServiceProvider);
+    final name = (user.name?.isNotEmpty ?? false)
+        ? user.name!
+        : (user.email?.split('@').first ?? 'Patient');
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Digital Health Card'),
@@ -17,15 +24,27 @@ class HealthCardScreen extends StatelessWidget {
             Center(
               child: Column(
                 children: [
-                  const Icon(Icons.qr_code_2, size: 150, color: Colors.blue),
+                  const Icon(Icons.badge_rounded, size: 110, color: Colors.blue),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Fatima Bibi',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  Text(
+                    name,
+                    style: const TextStyle(
+                        fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    'ID: MC-2026-4482',
+                    user.email ?? '—',
                     style: TextStyle(color: Colors.grey.shade600),
+                  ),
+                  Text(
+                    'Member ID: MC-${user.userId?.substring(0, 8) ?? "00000000"}',
+                    style: TextStyle(color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Health details below are examples — enter real values '
+                    'clinically confirmed by your doctor.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
                   ),
                 ],
               ),
@@ -34,27 +53,26 @@ class HealthCardScreen extends StatelessWidget {
             _buildInfoSection(
               title: 'Personal Information',
               items: [
-                _buildInfoRow('CNIC', '42101-XXXXXXX-X'),
-                _buildInfoRow('Blood Group', 'B+'),
-                _buildInfoRow('Age', '42 Years'),
-                _buildInfoRow('Weight', '68 kg'),
-                _buildInfoRow('Height', '5\'4"'),
+                _buildInfoRow('Blood Group', '—'),
+                _buildInfoRow('Age', '—'),
+                _buildInfoRow('Weight', '—'),
+                _buildInfoRow('Height', '—'),
               ],
             ),
             const SizedBox(height: 24),
             _buildInfoSection(
               title: 'Medical Conditions',
               items: [
-                _buildChipRow('Chronic', ['Hypertension', 'Diabetes Type 2']),
-                _buildChipRow('Allergies', ['Penicillin', 'Dust']),
+                _buildChipRow('Chronic', ['None recorded']),
+                _buildChipRow('Allergies', ['None recorded']),
               ],
             ),
             const SizedBox(height: 24),
             _buildInfoSection(
               title: 'Emergency Contact',
               items: [
-                _buildInfoRow('Name', 'Ali Ahmed (Husband)'),
-                _buildInfoRow('Phone', '+92 300 1234567'),
+                _buildInfoRow('Name', '—'),
+                _buildInfoRow('Phone', '—'),
               ],
             ),
           ],

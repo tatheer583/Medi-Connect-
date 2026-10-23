@@ -46,21 +46,26 @@ class _AiSummaryWidgetState extends State<AiSummaryWidget> {
           .toList();
 
       final medicines = prescriptions.isNotEmpty
-          ? (prescriptions.first.data['medicines'] as List<dynamic>? ?? [])
-              .map((m) => m.toString().split('|').first)
+          ? DatabaseService.decodeMedicines(prescriptions.first.data['medicines'])
+              .map((m) => m['name'] ?? '')
+              .where((n) => n.isNotEmpty)
               .toList()
           : <String>[];
 
       final labs = labResults
           .take(3)
-          .map((d) => '${d.data['testName']} on ${d.data['uploadedAt']?.toString().substring(0, 10)}')
+          .map((d) {
+            final ts = d.data['uploadedAt']?.toString() ?? '';
+            final dateTag = ts.length >= 10 ? ts.substring(0, 10) : ts;
+            return '${d.data['testName']} on $dateTag';
+          })
           .toList();
 
       final summary = await AiService().generatePatientSummary(
         patientName: widget.patientName,
-        pastAppointments: pastApts.cast<String>(),
-        currentMedicines: medicines.cast<String>(),
-        labResults: labs.cast<String>(),
+        pastAppointments: pastApts,
+        currentMedicines: medicines,
+        labResults: labs,
       );
 
       if (mounted) setState(() => _summary = summary);
@@ -127,7 +132,9 @@ class _AiSummaryWidgetState extends State<AiSummaryWidget> {
                               color: Colors.white),
                         ),
                         Text(
-                          'Powered by Claude AI',
+                          AiService.isConfigured
+                              ? 'Powered by OpenAI'
+                              : 'Add an OPENAI_API_KEY to enable real AI',
                           style: GoogleFonts.inter(
                               fontSize: 11,
                               color: Colors.white.withValues(alpha: 0.8)),

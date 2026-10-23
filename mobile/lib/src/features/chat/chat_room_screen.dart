@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:mediconnect_mobile/src/services/auth_service.dart';
 import 'package:mediconnect_mobile/src/services/database_service.dart';
+import 'package:mediconnect_mobile/src/shared/widgets/app_toast.dart';
 import 'package:mediconnect_mobile/src/shared/widgets/shimmer_loader.dart';
 import 'package:mediconnect_mobile/src/theme/app_theme.dart';
 
@@ -38,11 +39,16 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   void initState() {
     super.initState();
     final userState = ref.read(authServiceProvider);
-    _myId = userState.userId ?? 'me';
-    _myName = userState.email?.split('@').first ?? 'User';
+    _myId = (userState.userId?.isNotEmpty ?? false)
+        ? userState.userId!
+        : (userState.email ?? 'me');
+    _myName = (userState.name?.isNotEmpty ?? false)
+        ? userState.name!
+        : (userState.email?.split('@').first ?? 'User');
 
-    // Chat ID is deterministic — sorted user IDs joined
-    final ids = [_myId, widget.otherUserId]..sort();
+    // Chat ID is deterministic — sorted user IDs joined, never shared.
+    final ids = [_myId, (widget.otherUserId.isEmpty ? 'unknown' : widget.otherUserId)]
+      ..sort();
     _chatId = ids.join('_');
 
     _loadMessages();
@@ -116,13 +122,18 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     try {
       await DatabaseService().sendMessage(
         senderId: _myId,
-        receiverId: widget.otherUserId,
+        receiverId: widget.otherUserId.isEmpty ? 'unknown' : widget.otherUserId,
         senderName: _myName,
         text: text,
         chatId: _chatId,
       );
-    } catch (_) {
-      // Realtime will handle adding to list
+    } catch (e) {
+      // Surface the failure — the user must know the message did not send.
+      if (mounted) {
+        AppToast.show(context, 'Message not sent — check your connection',
+            type: ToastType.error);
+        _ctrl.text = text; // restore unsent text
+      }
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -155,7 +166,9 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
               radius: 18,
               backgroundColor: AppColors.primary.withValues(alpha: 0.1),
               child: Text(
-                widget.otherUserName[0].toUpperCase(),
+                widget.otherUserName.isNotEmpty
+                    ? widget.otherUserName[0].toUpperCase()
+                    : '?',
                 style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -171,9 +184,9 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary)),
-                Text('Online',
+                Text('Realtime chat',
                     style: GoogleFonts.inter(
-                        fontSize: 11, color: AppColors.success)),
+                        fontSize: 11, color: AppColors.textSecondary)),
               ],
             ),
           ],

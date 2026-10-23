@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mediconnect_mobile/src/theme/app_theme.dart';
 import 'package:mediconnect_mobile/src/services/appwrite_service.dart';
+import 'package:mediconnect_mobile/src/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
@@ -34,6 +36,17 @@ class _SplashScreenState extends State<SplashScreen> {
         appwrite.initialize();
         final hasSession = await appwrite.hasSession();
         if (hasSession && mounted) {
+          // Hydrate the global auth state so dashboards/records work.
+          final role = UserRole.values.firstWhere(
+            (e) => e.name == roleString,
+            orElse: () => UserRole.patient,
+          );
+          ref.read(authServiceProvider.notifier).login(
+                prefs.getString('user_email') ?? '',
+                role,
+                userId: prefs.getString('appwrite_user_id'),
+                name: prefs.getString('user_name'),
+              );
           context.go('/dashboard');
           return;
         }

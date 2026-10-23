@@ -5,6 +5,7 @@ import 'package:mediconnect_mobile/src/services/auth_service.dart';
 import 'package:mediconnect_mobile/src/services/appwrite_service.dart';
 import 'package:mediconnect_mobile/src/features/profile/health_card_screen.dart';
 import 'package:mediconnect_mobile/src/features/clinics/clinic_setup_screen.dart';
+import 'package:mediconnect_mobile/src/shared/widgets/app_toast.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -369,9 +370,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () {
-                setState(() => _displayName = nameCtrl.text.trim());
+              onPressed: () async {
+                final newName = nameCtrl.text.trim();
+                if (newName.isEmpty) return;
                 Navigator.pop(ctx);
+                try {
+                  // Persist on the Appwrite account + local prefs.
+                  await AppwriteService().updateName(newName);
+                  if (!mounted) return;
+                  setState(() => _displayName = newName);
+                  AppToast.show(context, 'Profile updated', type: ToastType.success);
+                } catch (e) {
+                  if (mounted) {
+                    AppToast.show(
+                        context,
+                        'Could not save name: ${e.toString().replaceFirst('Exception: ', '')}',
+                        type: ToastType.error);
+                  }
+                }
               },
               child: const Text('Save'),
             ),

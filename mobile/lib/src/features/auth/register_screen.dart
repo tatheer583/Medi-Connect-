@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mediconnect_mobile/src/services/appwrite_service.dart';
@@ -10,15 +11,15 @@ import 'package:mediconnect_mobile/src/shared/widgets/gradient_button.dart';
 import 'package:mediconnect_mobile/src/theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class RegisterScreen extends StatefulWidget {
+class RegisterScreen extends ConsumerStatefulWidget {
   final UserRole? role;
   const RegisterScreen({super.key, this.role});
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
@@ -79,14 +80,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await prefs.setString('user_role', role.name);
       await prefs.setString('user_email', _emailCtrl.text.trim());
       await prefs.setString('user_name', _nameCtrl.text.trim());
-
-      if (mounted) {
-        AppToast.show(context, 'Account created! Please verify your email.', type: ToastType.success);
-        context.pushNamed('otp', extra: {
-          'email': _emailCtrl.text.trim(),
-          'role': role,
-        });
+      if ((widget.role ?? UserRole.patient) == UserRole.doctor &&
+          _licenseCtrl.text.trim().isNotEmpty) {
+        await prefs.setString('pmdc_license', _licenseCtrl.text.trim());
       }
+
+      if (!mounted) return;
+      ref.read(authServiceProvider.notifier).login(
+        _emailCtrl.text.trim(),
+        role,
+        name: _nameCtrl.text.trim(),
+      );
+      AppToast.show(context, 'Account created — welcome to MediConnect!',
+          type: ToastType.success);
+      context.go('/dashboard');
     } catch (e) {
       if (!mounted) return;
       final msg = e.toString().replaceFirst('Exception: ', '');
@@ -242,6 +249,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               AppToast.show(context, 'Enter a valid email', type: ToastType.warning);
                               return;
                             }
+                            if (isDoctor && _licenseCtrl.text.trim().isEmpty) {
+                              AppToast.show(context, 'PMDC license is required for doctors', type: ToastType.warning);
+                              return;
+                            }
                             setState(() => _step = 1);
                           },
                         ).animate().fadeIn(delay: 300.ms),
@@ -342,7 +353,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           Text('Already have an account? ',
                               style: GoogleFonts.inter(color: AppColors.textSecondary)),
                           GestureDetector(
-                            onTap: () => context.pop(),
+                            onTap: () => context.pushNamed('login', extra: widget.role),
                             child: Text('Sign In',
                                 style: GoogleFonts.inter(
                                     color: AppColors.primary, fontWeight: FontWeight.w600)),

@@ -1,15 +1,21 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:mediconnect_mobile/src/config/app_config.dart';
 
 class AiService {
   static final AiService _instance = AiService._internal();
   factory AiService() => _instance;
   AiService._internal();
 
-  // API key should be provided at runtime - user must call initialize()
-  static String _apiKey = '';
+  // Defaults to the compile-time key (--dart-define=OPENAI_API_KEY=...);
+  // initialize() can override it at runtime.
+  static String _apiKey = AppConfig.openAiApiKey;
   static const String _endpoint = 'https://api.openai.com/v1/chat/completions';
   static const String _model = 'gpt-4o-mini';
+
+  /// True when an API key is available — callers can show a helpful
+  /// "not configured" state instead of a failing request.
+  static bool get isConfigured => _apiKey.isNotEmpty;
 
   /// Initialize the AI service with API key
   static void initialize(String apiKey) {

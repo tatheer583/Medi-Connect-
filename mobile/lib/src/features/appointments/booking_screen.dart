@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -21,6 +22,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   String? _selectedSlot;
   bool _isBooking = false;
+  List<String> _bookedSlots = [];
 
   final List<String> _allSlots = [
     '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM',
@@ -28,8 +30,31 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM',
   ];
 
-  // Slots already booked (would come from DB in production)
-  final List<String> _bookedSlots = ['09:30 AM', '11:00 AM', '03:00 PM'];
+  @override
+  void initState() {
+    super.initState();
+    _loadBookedSlots();
+  }
+
+  String get _dateIso {
+    final y = _selectedDate.year.toString().padLeft(4, '0');
+    final m = _selectedDate.month.toString().padLeft(2, '0');
+    final d = _selectedDate.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+
+  Future<void> _loadBookedSlots() async {
+    try {
+      final booked = await DatabaseService().getBookedSlots(
+        doctorId: widget.doctor['id'] ?? widget.doctor['name'] ?? 'doc',
+        date: _dateIso,
+      );
+      if (mounted) setState(() => _bookedSlots = booked);
+    } catch (_) {
+      // If the lookup fails (e.g. no collection yet), all slots stay
+      // selectable — no fake bookings shown.
+    }
+  }
 
   Future<void> _confirmBooking() async {
     if (_selectedSlot == null) return;
@@ -39,9 +64,22 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     try {
       final userState = ref.read(authServiceProvider);
       final userId = userState.userId ?? 'unknown';
-      final userName = userState.email?.split('@').first ?? 'Patient';
-      final dateStr = DateFormat('dd MMM yyyy').format(_selectedDate);
+      final userName =
+          (userState.name?.isNotEmpty ?? false) ? userState.name! : (userState.email?.split('@').first ?? 'Patient');
+      final dateStr = _dateIso;
       final slot = _selectedSlot!;
+
+      // Guard against double-booking raced slots.
+      final booked = await DatabaseService().getBookedSlots(
+          doctorId: widget.doctor['id'] ?? widget.doctor['name'] ?? 'doc',
+          date: dateStr);
+      if (booked.contains(slot)) {
+        if (!mounted) return;
+        AppToast.show(context, 'That slot was just booked — pick another',
+            type: ToastType.warning);
+        await _loadBookedSlots();
+        return;
+      }
 
       await DatabaseService().createAppointment(
         patientId: userId,
@@ -49,18 +87,23 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
         doctorId: widget.doctor['id'] ?? widget.doctor['name'] ?? 'doc',
         doctorName: widget.doctor['name'] ?? 'Doctor',
         specialty: widget.doctor['specialty'] ?? '',
-        date: dateStr,
+        date: _dateIso,
         timeSlot: slot,
         fee: widget.doctor['fee'] ?? '0',
       );
 
-      // Show local notification confirmation
-      await NotificationService().showInstantNotification(
-        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        title: 'Appointment Booked',
-        body:
-            'Your appointment with ${widget.doctor['name']} on $dateStr at $slot is confirmed.',
-      );
+      // Booking succeeded — notifications are a best-effort extra and can
+      // never turn this into a "failed" booking.
+      try {
+        await NotificationService().showInstantNotification(
+          id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          title: 'Appointment Booked',
+          body:
+              'Your appointment with ${widget.doctor['name']} on $dateStr at $slot is confirmed.',
+        );
+      } catch (e) {
+        debugPrint('Notification skipped (plugin unavailable): $e');
+      }
 
       if (!mounted) return;
       AppToast.show(
@@ -115,6 +158,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
               onDateSelected: (d) => setState(() {
                 _selectedDate = d;
                 _selectedSlot = null;
+                _loadBookedSlots();
               }),
             ),
 

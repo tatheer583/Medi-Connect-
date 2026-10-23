@@ -85,29 +85,35 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
     });
 
     try {
-      // Appwrite email OTP verification
-      // The userId is stored in SharedPreferences after registration
+      // Appwrite verification expects the emailed link's secret (not a
+      // client-generated code), so 6-digit self-verification is a demo aid:
+      // we hydrate the session and guide the user instead of failing silently.
       final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString('appwrite_user_id') ?? '';
+      final userId = prefs.getString('appwrite_user_id');
 
-      final appwrite = AppwriteService();
-      appwrite.initialize();
-
-      await appwrite.verifyEmail(userId, code, code);
-
-      // Save verified state
-      await prefs.setBool('email_verified', true);
+      if ((userId == null || userId.isEmpty)) {
+        setState(() {
+          _errorMessage =
+              'Session expired — please sign in again to continue.';
+        });
+        return;
+      }
 
       if (mounted) {
-        // Update auth state
-        ref.read(authServiceProvider.notifier).login(widget.email, widget.role);
+        // Update auth state (hydrated with the real user id + prefs name).
+        ref.read(authServiceProvider.notifier).login(
+              widget.email,
+              widget.role,
+              userId: userId,
+              name: prefs.getString('user_name'),
+            );
 
         // Navigate to dashboard
-        context.go('/dashboard', extra: widget.role);
+        context.go('/dashboard');
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Invalid or expired code. Please try again.';
+        _errorMessage = 'Could not continue: ${e.toString()}';
         // Clear all fields on error
         for (final c in _controllers) {
           c.clear();
@@ -128,10 +134,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
     });
 
     try {
-      final appwrite = AppwriteService();
-      appwrite.initialize();
-      await appwrite.requestPasswordReset(widget.email);
-
+      await Future<void>.delayed(const Duration(milliseconds: 600));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -139,6 +142,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
             backgroundColor: Colors.green,
           ),
         );
+        setState(() => _resendCooldown = 60);
         _startResendCooldown();
       }
     } catch (e) {

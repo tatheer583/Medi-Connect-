@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mediconnect_mobile/src/services/auth_service.dart';
+import 'package:mediconnect_mobile/src/services/database_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class ClinicSetupScreen extends StatefulWidget {
+class ClinicSetupScreen extends ConsumerStatefulWidget {
   const ClinicSetupScreen({super.key});
 
   @override
-  State<ClinicSetupScreen> createState() => _ClinicSetupScreenState();
+  ConsumerState<ClinicSetupScreen> createState() => _ClinicSetupScreenState();
 }
 
-class _ClinicSetupScreenState extends State<ClinicSetupScreen> {
+class _ClinicSetupScreenState extends ConsumerState<ClinicSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _clinicNameCtrl = TextEditingController(text: 'MediConnect Clinic');
   final _addressCtrl = TextEditingController(text: 'Phase 5, DHA, Lahore');
   final _phoneCtrl = TextEditingController(text: '+92 300 1234567');
-  final _licenseCtrl = TextEditingController(text: 'PMDC-12345');
+  final _licenseCtrl = TextEditingController();
   final _feeCtrl = TextEditingController(text: '2000');
 
   bool _isSaving = false;
@@ -46,21 +50,78 @@ class _ClinicSetupScreenState extends State<ClinicSetupScreen> {
     super.dispose();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _loadSaved();
+  }
+
+  /// Prefills previously saved values so "save" actually sticks.
+  Future<void> _loadSaved() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _clinicNameCtrl.text = prefs.getString('clinic_name') ?? _clinicNameCtrl.text;
+      _addressCtrl.text = prefs.getString('clinic_address') ?? _addressCtrl.text;
+      _phoneCtrl.text = prefs.getString('clinic_phone') ?? _phoneCtrl.text;
+      _licenseCtrl.text =
+          prefs.getString('pmdc_license') ?? _licenseCtrl.text;
+      _feeCtrl.text = prefs.getString('clinic_fee') ?? _feeCtrl.text;
+    });
+  }
+
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
-    await Future.delayed(const Duration(seconds: 1)); // Simulate save
-    if (mounted) {
-      setState(() {
-        _isSaving = false;
-        _saved = true;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Clinic settings saved'),
-          backgroundColor: Colors.green,
-        ),
-      );
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('clinic_name', _clinicNameCtrl.text.trim());
+      await prefs.setString('clinic_address', _addressCtrl.text.trim());
+      await prefs.setString('clinic_phone', _phoneCtrl.text.trim());
+      await prefs.setString('pmdc_license', _licenseCtrl.text.trim());
+      await prefs.setString('clinic_fee', _feeCtrl.text.trim());
+
+      // Keep the doctor row in Appwrite in sync so patients can find the
+      // practice in doctor search (best-effort; never blocks the save).
+      final auth = ref.read(authServiceProvider);
+      try {
+        if ((auth.userId ?? '').isNotEmpty) {
+          await DatabaseService().upsertDoctor(
+            auth.userId!,
+            auth.name ?? 'Dr. ${auth.email?.split('@').first ?? "Doctor"}',
+            _selectedSpecialties.isNotEmpty
+                ? _selectedSpecialties.first
+                : 'General Physician',
+            fee: _feeCtrl.text.trim(),
+          );
+        }
+      } catch (e) {
+        debugPrint('Doctor row sync skipped: $e');
+      }
+
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+          _saved = true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Clinic settings saved'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save: ${e.toString().replaceFirst('Exception: ', '')}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
     }
   }
 

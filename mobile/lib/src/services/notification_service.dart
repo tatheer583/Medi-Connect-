@@ -1,4 +1,5 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:mediconnect_mobile/src/config/app_config.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 
@@ -12,6 +13,8 @@ class NotificationService {
 
   Future<void> initialize() async {
     tz_data.initializeTimeZones();
+    // Schedule reminders in the app's local timezone, not UTC.
+    tz.setLocalLocation(tz.getLocation(AppConfig.defaultTimezone));
 
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');

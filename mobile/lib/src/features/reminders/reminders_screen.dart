@@ -125,33 +125,37 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                 label: 'Set Reminder',
                 icon: Icons.alarm_add_rounded,
                 onPressed: () async {
-                  if (nameCtrl.text.trim().isEmpty) return;
+                  if (nameCtrl.text.trim().isEmpty || !ctx.mounted) return;
                   Navigator.pop(ctx);
 
                   try {
                     final userId =
                         ref.read(authServiceProvider).userId ?? '';
-                    final timeStr =
-                        '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
+                    final timeStr = selectedTime.format(context);
 
                     final doc = await DatabaseService().createReminder(
                       userId: userId,
                       medicineName: nameCtrl.text.trim(),
                       dosage: dosageCtrl.text.trim(),
-                      time: selectedTime.format(context),
+                      time: timeStr,
                       active: true,
                     );
 
-                    // Schedule local notification
-                    final reminderId =
-                        doc.$id.hashCode.abs() % 100000;
-                    await NotificationService().scheduleMedicineReminder(
-                      id: reminderId,
-                      medicineName: nameCtrl.text.trim(),
-                      dosage: dosageCtrl.text.trim(),
-                      hour: selectedTime.hour,
-                      minute: selectedTime.minute,
-                    );
+                    // Schedule a local notification separately — on web or
+                    // without permissions this is a no-op, never a failure.
+                    int reminderId = doc.$id.hashCode.abs() % 100000;
+                    try {
+                      await NotificationService().scheduleMedicineReminder(
+                        id: reminderId,
+                        medicineName: nameCtrl.text.trim(),
+                        dosage: dosageCtrl.text.trim(),
+                        hour: selectedTime.hour,
+                        minute: selectedTime.minute,
+                      );
+                    } catch (e) {
+                      debugPrint(
+                          'Notification scheduling unavailable: $e');
+                    }
 
                     if (mounted) {
                       AppToast.show(context, 'Reminder set for $timeStr',
@@ -160,7 +164,9 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                     }
                   } catch (e) {
                     if (mounted) {
-                      AppToast.show(context, 'Failed to set reminder',
+                      AppToast.show(
+                          context,
+                          'Failed to set reminder: ${e.toString().replaceFirst('Exception: ', '')}',
                           type: ToastType.error);
                     }
                   }
@@ -188,18 +194,30 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
         );
         _loadReminders();
       }
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        AppToast.show(context, 'Could not update reminder: $e',
+            type: ToastType.error);
+      }
+    }
   }
 
   Future<void> _deleteReminder(String id) async {
     try {
       await DatabaseService().deleteReminder(id);
-      await NotificationService().cancelReminder(id.hashCode.abs() % 100000);
+      try {
+        await NotificationService().cancelReminder(id.hashCode.abs() % 100000);
+      } catch (_) {}
       if (mounted) {
         AppToast.show(context, 'Reminder deleted', type: ToastType.info);
         _loadReminders();
       }
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        AppToast.show(context, 'Could not delete reminder: $e',
+            type: ToastType.error);
+      }
+    }
   }
 
   @override

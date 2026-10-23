@@ -1,5 +1,7 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
+import 'package:flutter/foundation.dart';
+import 'package:mediconnect_mobile/src/services/database_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppwriteService {
@@ -102,11 +104,45 @@ class AppwriteService {
         email: email,
         password: password,
       );
-
       await saveSession(session.$id, user.$id);
+
+      // Persist a profile the rest of the app can read (role-aware views).
+      try {
+        await _databases.createDocument(
+          databaseId: AppwriteDB.databaseId,
+          collectionId: AppwriteDB.users,
+          documentId: ID.unique(),
+          data: {
+            'userId': user.$id,
+            'email': email,
+            'role': role,
+            'fullName': name,
+            'createdAt': DateTime.now().toIso8601String(),
+          },
+        );
+      } catch (e) {
+        debugPrint('Profile save skipped (collection may be missing): $e');
+      }
+
+      // Cache identity locally so screens stay hydrated across restarts.
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_role', role);
+      await prefs.setString('user_email', email);
+      await prefs.setString('user_name', name);
     } catch (e) {
       throw _mapException(e);
     }
+  }
+
+  /// Sets a new display name on the Appwrite account and locally.
+  Future<void> updateName(String name) async {
+    try {
+      await _account.updateName(name: name);
+    } catch (e) {
+      throw _mapException(e);
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_name', name);
   }
 
   Future<void> logout() async {
@@ -137,11 +173,13 @@ class AppwriteService {
     }
   }
 
-  Future<void> requestPasswordReset(String email) async {
+  Future<void> requestPasswordReset(String email, {String? redirectTo}) async {
     try {
+      // Use the calling context's web origin when available so the emailed
+      // link lands back on the app; fall back to a stable URL on mobile.
       await _account.createRecovery(
         email: email,
-        url: 'https://mediconnect.app/reset-password',
+        url: redirectTo ?? 'https://mediconnect.app/reset-password',
       );
     } catch (e) {
       throw _mapException(e);

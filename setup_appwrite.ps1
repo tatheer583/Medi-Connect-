@@ -112,6 +112,7 @@ New-StringAttr "prescriptions" "doctorName" 100 $true
 New-StringAttr "prescriptions" "patientId" 36 $true
 New-StringAttr "prescriptions" "patientName" 100 $true
 New-StringAttr "prescriptions" "diagnosis" 500 $true
+New-StringAttr "prescriptions" "medicines" 10000 $false   # JSON-encoded medicine list (name|dosage|freq|duration)
 New-StringAttr "prescriptions" "instructions" 500 $false
 New-StringAttr "prescriptions" "appointmentId" 36 $false
 New-StringAttr "prescriptions" "createdAt" 50 $true
