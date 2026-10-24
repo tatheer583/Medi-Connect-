@@ -6,7 +6,7 @@ import 'package:appwrite/appwrite.dart';
 /// Keep secrets (API keys) server-side or compile-time only.
 class AppwriteConfig {
   static const String endpoint = 'https://fra.cloud.appwrite.io/v1';
-  static const String projectId = '6a14834f003c65073c46';
+  static const String projectId = '6adbaf74001f1772ff9b';
   static const String databaseId = 'mediconnect_db';
 
   /// Builds a direct view URL for a file in Appwrite Storage so it can be

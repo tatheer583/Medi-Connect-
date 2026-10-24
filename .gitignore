@@ -77,3 +77,7 @@ releases/
 # ─── Misc temp docs ───────────────────────────────────────────
 APK_*.md
 DIAGNOSTIC_REPORT.md
+
+# Appwrite CLI tooling (auto-generated)
+.agents/
+.claude/

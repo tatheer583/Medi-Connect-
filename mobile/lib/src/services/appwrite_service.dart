@@ -1,6 +1,7 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:flutter/foundation.dart';
+import 'package:mediconnect_mobile/src/config/appwrite_client.dart';
 import 'package:mediconnect_mobile/src/services/database_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -13,19 +14,13 @@ class AppwriteService {
   late Account _account;
   late Databases _databases;
 
-  // Hardcoded for production — these are public client-side values
-  static const String _endpoint = 'https://fra.cloud.appwrite.io/v1';
-  static const String _projectId = '6a14834f003c65073c46';
-
   bool _isInitialized = false;
 
   void initialize() {
     if (_isInitialized) return;
 
-    _client = Client()
-        .setEndpoint(_endpoint)
-        .setProject(_projectId);
-
+    // Single source of truth: src/config/appwrite_client.dart
+    _client = client;
     _account = Account(_client);
     _databases = Databases(_client);
 

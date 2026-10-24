@@ -6,7 +6,7 @@ param(
     [string]$ApiKey
 )
 
-$ProjectId = "YOUR_APPWRITE_PROJECT_ID"
+$ProjectId = "6adbaf74001f1772ff9b"
 $Endpoint = "https://fra.cloud.appwrite.io/v1"
 $DatabaseId = "mediconnect_db"
 
@@ -50,7 +50,7 @@ function New-Collection {
     $col = Invoke-AppwriteAPI -Method POST -Path "/databases/$DatabaseId/collections" -Body @{
         collectionId = $CollectionId
         name = $Name
-        permissions = @("create(\"any\")", "read(\"any\")", "update(\"any\")", "delete(\"any\")")
+        permissions = @("create(\"users\")", "read(\"users\")", "update(\"users\")", "delete(\"users\")")
         documentSecurity = $false
     }
     if ($col) { Write-Host "  ✅ Collection: $CollectionId" -ForegroundColor Green }
@@ -209,7 +209,7 @@ if ($testDoc) {
 # ─── Update .env files ────────────────────────────────────────────────────────
 Write-Host "`n[5/7] Updating .env files..." -ForegroundColor Yellow
 
-$backendEnvPath = "c:\Users\1\Medi Connect\backend-node\.env"
+$backendEnvPath = Join-Path $PSScriptRoot "backend-node\.env"
 $envContent = Get-Content $backendEnvPath -Raw
 $envContent = $envContent -replace "APPWRITE_PROJECT_ID=.*", "APPWRITE_PROJECT_ID=$ProjectId"
 $envContent = $envContent -replace "APPWRITE_API_KEY=.*", "APPWRITE_API_KEY=$ApiKey"
