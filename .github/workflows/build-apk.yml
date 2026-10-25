@@ -6,6 +6,10 @@ on:
       - main
   workflow_dispatch: # Allows manual trigger from GitHub UI
 
+# Required for the GITHUB_TOKEN to create/update the Release with the APK
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build APK and Create Release
