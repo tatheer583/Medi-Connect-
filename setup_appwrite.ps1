@@ -160,8 +160,52 @@ New-StringAttr "doctors" "rating" 10 $true
 New-StringAttr "doctors" "userId" 36 $false
 New-BoolAttr   "doctors" "available" $true
 
+# ─── INDEXES ──────────────────────────────────────────────────────────────────
+# Query.search (fulltext) REQUIRES a fulltext index; ordering (orderAsc/
+# orderDesc) requires a key index. Without these the app's queries fail.
+Write-Host "`n[3/7] Creating indexes..." -ForegroundColor Yellow
+
+function New-Index {
+    param($CollectionId, $Key, $Type, $Attributes)
+    Invoke-AppwriteAPI -Method POST -Path "/databases/$DatabaseId/collections/$CollectionId/indexes" -Body @{
+        key = $Key
+        type = $Type
+        attributes = $Attributes
+    } | Out-Null
+    Write-Host "    + index $Key ($Type) on $CollectionId" -ForegroundColor Gray
+}
+
+# doctors: fulltext on name powers doctor search
+New-Index "doctors" "name_search" "fulltext" @("name")
+New-Index "doctors" "userId_idx" "key" @("userId")
+New-Index "doctors" "specialty_idx" "key" @("specialty")
+
+# appointments: ordering by date/createdAt + lookups by patient/doctor
+New-Index "appointments" "createdAt_idx" "key" @("createdAt")
+New-Index "appointments" "date_idx" "key" @("date")
+New-Index "appointments" "patientId_idx" "key" @("patientId")
+New-Index "appointments" "doctorId_idx" "key" @("doctorId")
+
+# prescriptions: ordering + patient lookup
+New-Index "prescriptions" "createdAt_idx" "key" @("createdAt")
+New-Index "prescriptions" "patientId_idx" "key" @("patientId")
+
+# chat_messages: ordering + conversation lookups
+New-Index "chat_messages" "createdAt_idx" "key" @("createdAt")
+New-Index "chat_messages" "chatId_idx" "key" @("chatId")
+New-Index "chat_messages" "senderId_idx" "key" @("senderId")
+New-Index "chat_messages" "receiverId_idx" "key" @("receiverId")
+
+# lab_results: ordering + patient lookup
+New-Index "lab_results" "uploadedAt_idx" "key" @("uploadedAt")
+New-Index "lab_results" "patientId_idx" "key" @("patientId")
+
+# medicine_reminders + users: per-user lookups
+New-Index "medicine_reminders" "userId_idx" "key" @("userId")
+New-Index "users" "userId_idx" "key" @("userId")
+
 # ─── Create Storage Buckets ───────────────────────────────────────────────────
-Write-Host "`n[3/7] Creating storage buckets..." -ForegroundColor Yellow
+Write-Host "`n[4/7] Creating storage buckets..." -ForegroundColor Yellow
 
 $labBucket = Invoke-AppwriteAPI -Method POST -Path "/storage/buckets" -Body @{
     bucketId = "lab_results_files"
@@ -184,7 +228,7 @@ $rxBucket = Invoke-AppwriteAPI -Method POST -Path "/storage/buckets" -Body @{
 if ($rxBucket) { Write-Host "  ✅ Bucket: prescriptions_files" -ForegroundColor Green }
 
 # ─── Test connection ──────────────────────────────────────────────────────────
-Write-Host "`n[4/7] Testing connection with a test document..." -ForegroundColor Yellow
+Write-Host "`n[5/7] Testing connection with a test document..." -ForegroundColor Yellow
 Start-Sleep -Seconds 2
 
 $testDoc = Invoke-AppwriteAPI -Method POST -Path "/databases/$DatabaseId/collections/users/documents" -Body @{
@@ -207,7 +251,7 @@ if ($testDoc) {
 }
 
 # ─── Update .env files ────────────────────────────────────────────────────────
-Write-Host "`n[5/7] Updating .env files..." -ForegroundColor Yellow
+Write-Host "`n[6/7] Updating .env files..." -ForegroundColor Yellow
 
 $backendEnvPath = Join-Path $PSScriptRoot "backend-node\.env"
 $envContent = Get-Content $backendEnvPath -Raw

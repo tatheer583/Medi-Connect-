@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mediconnect_mobile/src/services/appwrite_service.dart';
 import 'package:mediconnect_mobile/src/services/auth_service.dart';
+import 'package:mediconnect_mobile/src/services/database_service.dart';
+import 'package:mediconnect_mobile/src/shared/medical_constants.dart';
 import 'package:mediconnect_mobile/src/shared/widgets/app_input.dart';
 import 'package:mediconnect_mobile/src/shared/widgets/app_toast.dart';
 import 'package:mediconnect_mobile/src/shared/widgets/gradient_button.dart';
@@ -26,6 +28,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
   final _licenseCtrl = TextEditingController();
+  final _feeCtrl = TextEditingController(text: '1000');
+  String? _specialty;
 
   int _step = 0; // 0 = personal, 1 = credentials
   bool _isLoading = false;
@@ -42,6 +46,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _passwordCtrl.dispose();
     _confirmCtrl.dispose();
     _licenseCtrl.dispose();
+    _feeCtrl.dispose();
     super.dispose();
   }
 
@@ -84,6 +89,32 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           _licenseCtrl.text.trim().isNotEmpty) {
         await prefs.setString('pmdc_license', _licenseCtrl.text.trim());
       }
+
+      // Doctors join the public directory immediately: create their real
+      // row in the `doctors` collection so patients can find and book them.
+      if (role == UserRole.doctor) {
+        await prefs.setString('specialty', _specialty!);
+        await prefs.setString('doctor_fee', _feeCtrl.text.trim());
+        try {
+          final userId = prefs.getString('appwrite_user_id');
+          if (userId != null && userId.isNotEmpty) {
+            await DatabaseService().upsertDoctor(
+              userId,
+              _nameCtrl.text.trim(),
+              _specialty!,
+              fee: _feeCtrl.text.trim(),
+            );
+          }
+        } catch (_) {
+          // Directory sync is best-effort — registration must not fail here.
+        }
+      }
+
+      // Real verification email, sent through Appwrite. Non-blocking: the
+      // user can use the app and verify from the emailed link anytime.
+      try {
+        await appwrite.sendEmailVerification();
+      } catch (_) {}
 
       if (!mounted) return;
       ref.read(authServiceProvider.notifier).login(
@@ -235,6 +266,37 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             prefixIcon: Icons.badge_outlined,
                             validator: (v) => (v == null || v.trim().isEmpty) ? 'License is required' : null,
                           ).animate().fadeIn(delay: 200.ms, duration: 300.ms).slideX(begin: 0.2, end: 0, delay: 200.ms),
+                          const SizedBox(height: 16),
+                          // Specialty + fee publish this doctor to the public
+                          // directory the moment registration completes.
+                          DropdownButtonFormField<String>(
+                            value: _specialty,
+                            decoration: InputDecoration(
+                              labelText: 'Specialty',
+                              prefixIcon: const Icon(Icons.medical_services_outlined),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            items: MedicalConstants.doctorSpecialties
+                                .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                                .toList(),
+                            onChanged: (v) => setState(() => _specialty = v),
+                            validator: (v) =>
+                                (v == null || v.isEmpty) ? 'Select your specialty' : null,
+                          ).animate().fadeIn(delay: 250.ms, duration: 300.ms).slideX(begin: 0.2, end: 0, delay: 250.ms),
+                          const SizedBox(height: 16),
+                          AppInput(
+                            controller: _feeCtrl,
+                            label: 'Consultation Fee (PKR)',
+                            prefixIcon: Icons.payments_outlined,
+                            keyboardType: TextInputType.number,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return 'Fee is required';
+                              if (int.tryParse(v.trim()) == null) return 'Enter a number';
+                              return null;
+                            },
+                          ).animate().fadeIn(delay: 300.ms, duration: 300.ms).slideX(begin: 0.2, end: 0, delay: 300.ms),
                         ],
                         const SizedBox(height: 32),
                         GradientButton(
@@ -251,6 +313,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             }
                             if (isDoctor && _licenseCtrl.text.trim().isEmpty) {
                               AppToast.show(context, 'PMDC license is required for doctors', type: ToastType.warning);
+                              return;
+                            }
+                            if (isDoctor && _specialty == null) {
+                              AppToast.show(context, 'Select your specialty to continue', type: ToastType.warning);
                               return;
                             }
                             setState(() => _step = 1);

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:mediconnect_mobile/src/config/appwrite_client.dart';
+import 'package:mediconnect_mobile/src/shared/medical_constants.dart';
 
 /// Appwrite database IDs — single source of truth, mirrors setup_appwrite.ps1
 class AppwriteDB {
@@ -238,10 +239,70 @@ class DatabaseService {
         'name': name,
         'specialty': specialty,
         'fee': fee,
-        'rating': '4.8',
+        // Schema requires a rating string; new doctors start unrated and the
+        // UI shows a "New" badge until real ratings exist.
+        'rating': MedicalConstants.unratedValue,
         'userId': userId,
         'available': true,
       },
+    );
+  }
+
+  /// Fetches the `doctors` row linked to this account, if one exists.
+  Future<models.Document?> getDoctorByUserId(String userId) async {
+    try {
+      final rows = await _db.listDocuments(
+        databaseId: AppwriteDB.databaseId,
+        collectionId: AppwriteDB.doctors,
+        queries: [Query.equal('userId', userId)],
+      );
+      return rows.documents.isEmpty ? null : rows.documents.first;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Publishes/unlists the doctor in the patient directory. Unavailable
+  /// doctors stay in the directory but patients cannot book them.
+  Future<void> setDoctorAvailability(
+    String userId, {
+    required bool available,
+  }) async {
+    final row = await getDoctorByUserId(userId);
+    if (row == null) {
+      throw Exception('Doctor profile not found — finish registration first');
+    }
+    await _db.updateDocument(
+      databaseId: AppwriteDB.databaseId,
+      collectionId: AppwriteDB.doctors,
+      documentId: row.$id,
+      data: {'available': available},
+    );
+  }
+
+  /// Updates the signed-in user's profile row in the `users` collection —
+  /// used by clinic setup to persist the practice name/phone server-side.
+  Future<void> updateUserProfile({
+    required String userId,
+    String? fullName,
+    String? phone,
+  }) async {
+    final rows = await _db.listDocuments(
+      databaseId: AppwriteDB.databaseId,
+      collectionId: AppwriteDB.users,
+      queries: [Query.equal('userId', userId)],
+    );
+    if (rows.documents.isEmpty) return;
+    final data = <String, dynamic>{
+      if (fullName != null) 'fullName': fullName,
+      if (phone != null) 'phone': phone,
+    };
+    if (data.isEmpty) return;
+    await _db.updateDocument(
+      databaseId: AppwriteDB.databaseId,
+      collectionId: AppwriteDB.users,
+      documentId: rows.documents.first.$id,
+      data: data,
     );
   }
 

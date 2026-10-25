@@ -82,6 +82,22 @@ class _ClinicSetupScreenState extends ConsumerState<ClinicSetupScreen> {
       await prefs.setString('pmdc_license', _licenseCtrl.text.trim());
       await prefs.setString('clinic_fee', _feeCtrl.text.trim());
 
+      // Persist the practice identity server-side (users collection) so the
+      // clinic name/phone are real cloud data, not device-only settings.
+      try {
+        final userId = prefs.getString('appwrite_user_id') ??
+            ref.read(authServiceProvider).userId;
+        if ((userId ?? '').isNotEmpty) {
+          await DatabaseService().updateUserProfile(
+            userId: userId!,
+            fullName: _clinicNameCtrl.text.trim(),
+            phone: _phoneCtrl.text.trim(),
+          );
+        }
+      } catch (e) {
+        debugPrint('Cloud profile sync skipped: $e');
+      }
+
       // Keep the doctor row in Appwrite in sync so patients can find the
       // practice in doctor search (best-effort; never blocks the save).
       final auth = ref.read(authServiceProvider);

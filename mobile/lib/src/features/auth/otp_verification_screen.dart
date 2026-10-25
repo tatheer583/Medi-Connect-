@@ -1,19 +1,24 @@
+import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mediconnect_mobile/src/services/appwrite_service.dart';
 import 'package:mediconnect_mobile/src/services/auth_service.dart';
+import 'package:mediconnect_mobile/src/services/database_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class OtpVerificationScreen extends ConsumerStatefulWidget {
   final String email;
-  final UserRole role;
+
+  /// The Appwrite token userId returned by [AppwriteService.requestEmailOtp]
+  /// — the emailed code is exchanged for a session against this token.
+  final String userId;
 
   const OtpVerificationScreen({
     super.key,
     required this.email,
-    required this.role,
+    required this.userId,
   });
 
   @override
@@ -29,6 +34,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
   bool _isResending = false;
   String? _errorMessage;
   int _resendCooldown = 0;
+  late String _userId = widget.userId;
 
   @override
   void initState() {
@@ -85,36 +91,48 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
     });
 
     try {
-      // Appwrite verification expects the emailed link's secret (not a
-      // client-generated code), so 6-digit self-verification is a demo aid:
-      // we hydrate the session and guide the user instead of failing silently.
+      // Real sign-in: exchange the emailed code for an Appwrite session.
+      final appwrite = AppwriteService();
+      final user = await appwrite.verifyEmailOtp(_userId, code);
+
+      // Resolve the real role from the users collection, mirroring the
+      // password login flow so both paths hydrate identically.
+      UserRole role = UserRole.patient;
+      try {
+        final profiles = await appwrite.databases.listDocuments(
+          databaseId: AppwriteDB.databaseId,
+          collectionId: AppwriteDB.users,
+          queries: [Query.equal('userId', user.$id)],
+        );
+        if (profiles.documents.isNotEmpty) {
+          final stored = profiles.documents.first.data['role']?.toString();
+          if (stored != null && stored.isNotEmpty) {
+            role = UserRole.values
+                .firstWhere((r) => r.name == stored, orElse: () => UserRole.patient);
+          }
+        }
+      } catch (_) {}
+
       final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString('appwrite_user_id');
+      await prefs.setString('user_email', user.email);
+      await prefs.setString('user_name', user.name);
+      await prefs.setString('user_role', role.name);
 
-      if ((userId == null || userId.isEmpty)) {
-        setState(() {
-          _errorMessage =
-              'Session expired — please sign in again to continue.';
-        });
-        return;
-      }
-
-      if (mounted) {
-        // Update auth state (hydrated with the real user id + prefs name).
-        ref.read(authServiceProvider.notifier).login(
-              widget.email,
-              widget.role,
-              userId: userId,
-              name: prefs.getString('user_name'),
-            );
-
-        // Navigate to dashboard
-        context.go('/dashboard');
-      }
+      if (!mounted) return;
+      ref.read(authServiceProvider.notifier).login(
+            user.email,
+            role,
+            userId: user.$id,
+            name: user.name.isNotEmpty ? user.name : user.email.split('@').first,
+          );
+      context.go('/dashboard');
     } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().toLowerCase();
       setState(() {
-        _errorMessage = 'Could not continue: ${e.toString()}';
-        // Clear all fields on error
+        _errorMessage = msg.contains('invalid') || msg.contains('expired')
+            ? 'That code is incorrect or has expired — try again or resend.'
+            : 'Could not verify: ${e.toString().replaceFirst('Exception: ', '')}';
         for (final c in _controllers) {
           c.clear();
         }
@@ -134,11 +152,14 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
     });
 
     try {
-      await Future<void>.delayed(const Duration(milliseconds: 600));
+      // A fresh code comes with a fresh token userId — keep it in state so
+      // the next verification targets the right token.
+      final newUserId = await AppwriteService().requestEmailOtp(widget.email);
       if (mounted) {
+        setState(() => _userId = newUserId);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Verification email resent'),
+            content: Text('A new code is on its way — check your inbox'),
             backgroundColor: Colors.green,
           ),
         );
@@ -199,7 +220,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                 ),
 
                 const Text(
-                  'Verify Your Email',
+                  'Enter Sign-in Code',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -209,7 +230,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'We sent a 6-digit code to\n${widget.email}',
+                  'We emailed a 6-digit sign-in code to\n${widget.email}',
                   style: const TextStyle(color: Colors.white70, fontSize: 15),
                   textAlign: TextAlign.center,
                 ),

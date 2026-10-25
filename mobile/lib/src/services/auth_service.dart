@@ -39,7 +39,11 @@ class UserState {
   }
 }
 
-@riverpod
+// keepAlive: the signed-in user must survive screen navigation. With the
+// default autoDispose the state was torn down the moment the login/splash
+// screen was disposed, so the dashboard received a fresh unauthenticated
+// state (missing name/userId) and rendered empty.
+@Riverpod(keepAlive: true)
 class AuthService extends _$AuthService {
   @override
   UserState build() {

@@ -7,6 +7,7 @@ import 'package:mediconnect_mobile/src/features/auth/role_selection_screen.dart'
 import 'package:mediconnect_mobile/src/features/auth/login_screen.dart';
 import 'package:mediconnect_mobile/src/features/auth/register_screen.dart';
 import 'package:mediconnect_mobile/src/features/auth/otp_verification_screen.dart';
+import 'package:mediconnect_mobile/src/features/auth/email_action_screens.dart';
 import 'package:mediconnect_mobile/src/features/dashboard/dashboard_screen.dart';
 import 'package:mediconnect_mobile/src/features/appointments/doctor_search_screen.dart';
 import 'package:mediconnect_mobile/src/features/appointments/booking_screen.dart';
@@ -26,6 +27,8 @@ enum AppRoute {
   login,
   register,
   otp,
+  verifyEmail,
+  resetPassword,
   dashboard,
   doctorSearch,
   booking,
@@ -38,7 +41,9 @@ enum AppRoute {
   reminders,
 }
 
-@riverpod
+// keepAlive: MaterialApp.router watches this for the app's whole lifetime;
+// rebuilding the router mid-navigation would reset the navigation stack.
+@Riverpod(keepAlive: true)
 GoRouter goRouter(GoRouterRef ref) {
   return GoRouter(
     initialLocation: '/',
@@ -67,12 +72,28 @@ GoRouter goRouter(GoRouterRef ref) {
         path: '/otp',
         name: AppRoute.otp.name,
         builder: (context, state) {
-          final data = state.extra as Map<String, dynamic>;
+          final data = state.extra! as Map<String, dynamic>;
           return OtpVerificationScreen(
             email: data['email'] as String,
-            role: data['role'] as UserRole,
+            userId: data['userId'] as String,
           );
         },
+      ),
+      GoRoute(
+        path: '/verify-email',
+        name: AppRoute.verifyEmail.name,
+        builder: (context, state) => VerifyEmailScreen(
+          userId: state.uri.queryParameters['userId'],
+          secret: state.uri.queryParameters['secret'],
+        ),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        name: AppRoute.resetPassword.name,
+        builder: (context, state) => ResetPasswordScreen(
+          userId: state.uri.queryParameters['userId'],
+          secret: state.uri.queryParameters['secret'],
+        ),
       ),
       GoRoute(
         path: '/dashboard',
@@ -87,9 +108,12 @@ GoRouter goRouter(GoRouterRef ref) {
       GoRoute(
         path: '/booking',
         name: AppRoute.booking.name,
+        // Booking always needs a real doctor from the directory — no
+        // hardcoded fallback; empty handoffs bounce back to search.
+        redirect: (context, state) =>
+            state.extra is Map<String, String> ? null : '/search',
         builder: (context, state) {
-          final doctor = (state.extra as Map<String, String>?) ??
-              {'name': 'Dr. Ahmed Raza', 'specialty': 'Cardiologist', 'fee': '2000', 'rating': '4.9'};
+          final doctor = state.extra! as Map<String, String>;
           return BookingScreen(doctor: doctor);
         },
       ),

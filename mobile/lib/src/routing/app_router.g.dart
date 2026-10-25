@@ -10,7 +10,7 @@ String _$goRouterHash() => r'9225ce129dd509582ebbcac7d6359472c081aef3';
 
 /// See also [goRouter].
 @ProviderFor(goRouter)
-final goRouterProvider = AutoDisposeProvider<GoRouter>.internal(
+final goRouterProvider = Provider<GoRouter>.internal(
   goRouter,
   name: r'goRouterProvider',
   debugGetCreateSourceHash:
@@ -21,4 +21,4 @@ final goRouterProvider = AutoDisposeProvider<GoRouter>.internal(
   allTransitiveDependencies: null,
 );
 
-typedef GoRouterRef = AutoDisposeProviderRef<GoRouter>;
+typedef GoRouterRef = ProviderRef<GoRouter>;

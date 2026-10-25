@@ -67,21 +67,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // Logo circle
-                Container(
-                  width: 110,
-                  height: 110,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      width: 2,
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.local_hospital_rounded,
-                    size: 56,
-                    color: Colors.white,
+                // Brand logo — generated asset (see test/logo_golden_test.dart)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(26),
+                  child: Image.asset(
+                    'assets/icons/app_icon.png',
+                    width: 110,
+                    height: 110,
+                    fit: BoxFit.cover,
                   ),
                 )
                     .animate()

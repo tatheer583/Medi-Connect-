@@ -1,10 +1,10 @@
 import 'package:appwrite/appwrite.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mediconnect_mobile/src/routing/app_router.dart';
 import 'package:mediconnect_mobile/src/services/appwrite_service.dart';
 import 'package:mediconnect_mobile/src/services/database_service.dart';
 import 'package:mediconnect_mobile/src/services/auth_service.dart';
@@ -128,10 +128,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (confirmed != true || !mounted) return;
 
     try {
-      await AppwriteService().requestPasswordReset(
-        emailCtrl.text.trim(),
-        redirectTo: kIsWeb ? Uri.base.removeFragment().toString() : null,
-      );
+      // No explicit redirectTo: the service deep-links to the deployed web
+      // app's /reset-password route on every platform, so the emailed link
+      // always lands in the app's reset screen.
+      await AppwriteService().requestPasswordReset(emailCtrl.text.trim());
       if (mounted) {
         AppToast.show(
             context, 'Reset link sent — check your inbox.',
@@ -144,6 +144,67 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             e.toString().replaceFirst('Exception: ', ''),
             type: ToastType.error);
       }
+    }
+  }
+
+  /// Real passwordless sign-in: Appwrite emails a 6-digit code, verified on
+  /// the OTP screen via [AppwriteService.verifyEmailOtp].
+  Future<void> _signInWithEmailCode() async {
+    final emailCtrl = TextEditingController(text: _emailCtrl.text);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sign in with Email Code'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+                'We will email you a 6-digit code to sign in — no password needed.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Send Code')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final email = emailCtrl.text.trim();
+    if (!email.contains('@')) {
+      AppToast.show(context, 'Enter a valid email', type: ToastType.warning);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final appwrite = AppwriteService();
+      final userId = await appwrite.requestEmailOtp(email);
+      if (!mounted) return;
+      context.pushNamed(AppRoute.otp.name,
+          extra: {'email': email, 'userId': userId});
+    } catch (e) {
+      if (mounted) {
+        AppToast.show(
+          context,
+          e.toString().replaceFirst('Exception: ', ''),
+          type: ToastType.error,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -299,6 +360,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         isLoading: _isLoading,
                         icon: Icons.login_rounded,
                       ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.2, end: 0, delay: 500.ms),
+
+                      const SizedBox(height: 12),
+
+                      OutlinedButton.icon(
+                        onPressed: _isLoading ? null : _signInWithEmailCode,
+                        icon: const Icon(Icons.mark_email_read_outlined, size: 20),
+                        label: Text(
+                          'Sign in with Email Code',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                        ),
+                      ).animate().fadeIn(delay: 550.ms),
 
                       const SizedBox(height: 24),
 
